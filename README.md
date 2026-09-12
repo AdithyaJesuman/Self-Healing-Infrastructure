@@ -17,9 +17,9 @@
 
 The **AIOps Autonomous Self-Healing Platform** is an enterprise-grade, event-driven infrastructure monitoring and automated remediation platform. Designed for high-concurrency microservices, cloud infrastructure, and Kubernetes environments, the platform solves the core challenge of modern Site Reliability Engineering (SRE): **drastically reducing Mean Time to Resolution (MTTR) without introducing the risks of AI hallucination**.
 
-Traditional observability tools (Datadog, Grafana, Dynatrace) stop at alert dispatching, leaving human engineers to manually debug outages over 30–60 minutes. Emerging Generative AI agents (LLMs) pose severe security risks by hallucinating non-deterministic terminal commands in production.
+Traditional observability tools (Datadog, Grafana, Dynatrace) stop at alert dispatching, leaving human engineers to manually debug outages over 30 to 60 minutes. Emerging Generative AI agents (LLMs) pose severe security risks by hallucinating non-deterministic terminal commands in production.
 
-This platform bridges the gap by employing a **10-Layer Hybrid Pipeline**: combining vectorized statistical Machine Learning (Isolation Forest + Robust Z-Scores), a **0% Hallucination Deterministic Multi-Agent SRE Brain**, an $M/M/k$ **Queueing-Theory Digital Twin Simulator**, and a **5-Gate Safety Policy Engine**.
+This platform bridges the gap by employing a **10-Layer Hybrid Pipeline**: combining vectorized statistical Machine Learning (Isolation Forest + Robust Z-Scores), a **0% Hallucination Deterministic Multi-Agent SRE Brain**, an M/M/k **Queueing-Theory Digital Twin Simulator**, and a **5-Gate Safety Policy Engine**.
 
 ---
 
@@ -27,8 +27,8 @@ This platform bridges the gap by employing a **10-Layer Hybrid Pipeline**: combi
 
 | Operating Metric | Legacy Manual SRE Workflow | LLM-Based Remediation | AIOps Autonomous Platform | Customer Impact |
 |---|---|---|---|---|
-| **Mean Time to Detection (MTTD)** | 5 – 15 Minutes | 1 – 3 Minutes | **< 1 Millisecond (0.73 μs)** | **Real-time anomaly identification** |
-| **Mean Time to Resolution (MTTR)** | 30 – 60 Minutes | 5 – 10 Minutes | **< 1 Second (Automated)** | **98%+ reduction in system downtime** |
+| **Mean Time to Detection (MTTD)** | 5 to 15 Minutes | 1 to 3 Minutes | **< 1 Millisecond (0.73 μs)** | **Real-time anomaly identification** |
+| **Mean Time to Resolution (MTTR)** | 30 to 60 Minutes | 5 to 10 Minutes | **< 1 Second (Automated)** | **98%+ reduction in system downtime** |
 | **Command Safety & Determinism** | Human Error Prone | Non-Deterministic (Hallucinations) | **100% Deterministic Matrix** | **Zero broken production fixes** |
 | **Fix Verification** | Trial & Error in Production | Blind Execution | **Digital Twin Simulation** | **Pre-execution impact validation** |
 | **Alert Noise Suppression** | High (PagerDuty Fatigue) | Medium | **95%+ Suppressed via Policy Gates** | **SRE team focus on strategic tasks** |
@@ -73,7 +73,7 @@ Decision Latency: [█                                                   ] 0.73 
 ---
 
 ### 🛡️ 2. Autonomous Self-Healing vs. Policy Escalation Benchmark (50 SRE Scenarios)
-Evaluated across 50 complex SRE failure scenarios (`python run_dataset_benchmark.py`). Every incident is evaluated by 5 Policy Engine Safety Gates (Cooldown, Confidence $\ge 0.95$, Consensus, Schema Guard, High Risk Guard).
+Evaluated across 50 complex SRE failure scenarios (`python run_dataset_benchmark.py`). Every incident is evaluated by 5 Policy Engine Safety Gates (Cooldown, Confidence >= 0.95, Multi-Agent Consensus, Schema Guard, High Risk Guard).
 
 ```text
 [█████████████████████████                          ] 25 AUTO_HEALED (50.0%)
@@ -83,8 +83,8 @@ Evaluated across 50 complex SRE failure scenarios (`python run_dataset_benchmark
 
 | Incident Outcome | Count | Percentage | Primary Policy Reason | Safety Protection Mechanism |
 |---|---|---|---|---|
-| **`AUTO_HEAL` Executed** | `25` | `50.0%` | Confidence $\ge 0.95$, High Consensus, Safe Action | Automated recovery (Staggered 25% → 50% → 100% rollout) |
-| **`ESCALATE_TO_HUMAN` Blocked** | `25` | `50.0%` | Cooldown active, Confidence $< 0.95$, Schema Guard, or Risk | Safely blocks execution and notifies human SRE team |
+| **`AUTO_HEAL` Executed** | `25` | `50.0%` | Confidence >= 0.95, High Consensus, Safe Action | Automated recovery (Staggered 25% -> 50% -> 100% rollout) |
+| **`ESCALATE_TO_HUMAN` Blocked** | `25` | `50.0%` | Cooldown active, Confidence < 0.95, Schema Guard, or Risk | Safely blocks execution and notifies human SRE team |
 
 ---
 
@@ -94,7 +94,7 @@ Evaluated across 50 complex SRE failure scenarios (`python run_dataset_benchmark
 ```
 - **24 Agent Unit Tests**: Coverage across Monitoring, Diagnosis, Forecast, Planner, Consensus, and Digital Twin.
 - **8 SRE Failure Scenarios**: DB Connection Pool Exhaustion, CPU Spikes, Memory Leaks, Queue Backpressure, Network Partitions, Disk IO Saturation.
-- **5 Performance Benchmarks**: 10,000 anomalies processed in $<5\text{s}$, zero-crash fuzzing, and ground-truth fix validation.
+- **5 Performance Benchmarks**: 10,000 anomalies processed in under 5 seconds, zero-crash fuzzing, and ground-truth fix validation.
 
 ---
 
@@ -123,79 +123,80 @@ flowchart TD
     end
 ```
 
-### Text & ASCII Pipeline Overview
+### Text Architecture Overview
 
 ```text
- ┌─────────────────────────────────────────────────────────────────────────────┐
- │                      10-LAYER SELF-HEALING PIPELINE                         │
- └─────────────────────────────────────────────────────────────────────────────┘
-  Layer 0: Telemetry Collector ──► Ingests CPU, RAM, Latency, Error Rate, RPS
-       │
-  Layer 1: Feature Engineering ──► Computes cpu_per_req, memory_slope, tail_skew
-       │
-  Layer 2: Anomaly Detection   ──► Ensemble: IsolationForest + 3σ + Thresholds
-       │
-  Layer 3: Signal Predictor    ──► Predicts Time-to-Failure (TTF) & Capacity Wall
-       │
-  Layer 4: Causal Discovery    ──► Lag-1 Cross-Correlation (Granger Causality)
-       │
-  Layer 5: Multi-Agent Brain   ──► 4 Agents (Monitoring, Diagnosis, Forecast, Plan)
-       │                              + Agent Consensus Evaluation
-  Layer 6: Knowledge Graph     ──► BFS Topology Discovery & Blast Radius Calculation
-       │
-  Layer 7: Digital Twin        ──► Queueing Theory Simulation of proposed fix
-       │
-  Layer 8: Policy Engine       ──► 5 Safety Gates (Cooldown, Conf≥0.95, Risk, etc.)
-       │
-  Layer 9: Post-Mortem Gen.    ──► Auto-generates Markdown Post-Mortem Incident Report
+  +-----------------------------------------------------------------------------+
+  |                      10-LAYER SELF-HEALING PIPELINE                         |
+  +-----------------------------------------------------------------------------+
+   Layer 0: Telemetry Collector  ---> Ingests CPU, RAM, Latency, Error Rate, RPS
+        |
+   Layer 1: Feature Engineering  ---> Computes cpu_per_req, memory_slope, tail_skew
+        |
+   Layer 2: Anomaly Detection    ---> Ensemble: IsolationForest + 3sigma + Thresholds
+        |
+   Layer 3: Signal Predictor     ---> Predicts Time-to-Failure (TTF) & Capacity Wall
+        |
+   Layer 4: Causal Discovery     ---> Lag-1 Cross-Correlation (Granger Causality)
+        |
+   Layer 5: Multi-Agent Brain    ---> 4 Agents (Monitoring, Diagnosis, Forecast, Plan)
+        |                               + Agent Consensus Evaluation
+   Layer 6: Knowledge Graph      ---> BFS Topology Discovery & Blast Radius Calculation
+        |
+   Layer 7: Digital Twin         ---> Queueing Theory Simulation of proposed fix
+        |
+   Layer 8: Policy Engine        ---> 5 Safety Gates (Cooldown, Conf >= 0.95, Risk)
+        |
+   Layer 9: Post-Mortem Gen.     ---> Auto-generates Markdown Post-Mortem Incident Report
 ```
 
 ### Deep Layer Technical Specification
 
-#### Layer 0 — Telemetry Collector
+#### Layer 0: Telemetry Collector
 Ingests real-time metrics (CPU%, Memory%, Response Time ms, Error Rate%, RPS, Active Connections, DB Query Time ms, Queue Depth) via `psutil` or Prometheus exporter streams.
 
-#### Layer 1 — NumPy Feature Engineering
+#### Layer 1: NumPy Feature Engineering
 Computes 4 derived feature indicators over sliding metric arrays:
-1. **CPU Per Request**: $\text{cpu\_per\_req} = \frac{\text{CPU\%}}{\text{RPS}}$
-2. **Little's Law Residual**: $\text{residual} = \text{ActiveConnections} - \left(\text{RPS} \times \frac{\text{ResponseTime}}{1000}\right)$
-3. **Memory Leak Slope**: $\text{slope} = \text{Polyfit Gradient over sliding 10-period window}$
-4. **Tail Skew**: $\text{tail\_skew} = \text{ResponseTime} - \text{Mean(ResponseTime)}$
+- **CPU Per Request**: `cpu_per_req = CPU% / RPS`
+- **Little's Law Residual**: `residual = ActiveConnections - (RPS * ResponseTime / 1000)`
+- **Memory Leak Slope**: `slope = Polyfit Gradient over sliding 10-period window`
+- **Tail Skew**: `tail_skew = ResponseTime - Mean(ResponseTime)`
 
-#### Layer 2 — Ensemble Anomaly Detector
-Combines a 200-tree Isolation Forest ($c=0.04$), 3-sigma statistical rolling baseline, and static threshold triggers over 12-dimensional feature vectors.
+#### Layer 2: Ensemble Anomaly Detector
+Combines a 200-tree Isolation Forest (`contamination=0.04`), 3-sigma statistical rolling baseline, and static threshold triggers over 12-dimensional feature vectors.
 
-#### Layer 3 — Signal Predictor
-Estimates Time-to-Failure (TTF) in seconds ($\text{TTF} < 60\text{s} \rightarrow \text{CRITICAL}$) and evaluates capacity wall breach velocity.
+#### Layer 3: Signal Predictor
+Estimates Time-to-Failure (TTF) in seconds (`TTF < 60s -> CRITICAL`) and evaluates capacity wall breach velocity.
 
-#### Layer 4 — Causal Discovery Engine
+#### Layer 4: Causal Discovery Engine
 Calculates lag-1 cross-correlation matrices across metrics to isolate root causes from downstream symptoms.
 
-#### Layer 5 — Multi-Agent Brain & Consensus Engine
+#### Layer 5: Multi-Agent Brain & Consensus Engine
 Executes 4 specialized deterministic agents:
-- **Monitoring Agent**: Confidence gating ($\ge 0.60$).
+- **Monitoring Agent**: Confidence gating (`confidence >= 0.60`).
 - **Diagnosis Agent**: Evaluates 15+ failure archetypes against diagnostic rules.
 - **Forecast Agent**: Computes business impact severity.
 - **Planner Agent**: Selects playbook fixes sorted by success rate.
-- **Consensus Engine**: Calculates standard deviation across agent confidences ($\sigma < 0.15 \rightarrow \text{HIGH\_CONSENSUS}$).
+- **Consensus Engine**: Calculates standard deviation across agent confidences (`std_dev < 0.15 -> HIGH_CONSENSUS`).
 
-#### Layer 6 — Knowledge Graph & Blast Radius Engine
-Maps microservice topology (`payment-api` $\rightarrow$ `postgres`, `redis`, `kafka`) and calculates 2-hop blast radius using Breadth-First Search (BFS).
+#### Layer 6: Knowledge Graph & Blast Radius Engine
+Maps microservice topology (`payment-api` -> `postgres`, `redis`, `kafka`) and calculates 2-hop blast radius using Breadth-First Search (BFS).
 
-#### Layer 7 — Digital Twin Queueing Simulator
-Simulates candidate fixes using $M/M/k$ queueing models:
-$$\lambda_{\text{effective}} = \text{RPS} \times (1 - \text{ShedRate}), \quad W_q = \frac{P_L}{\mu - \lambda}$$
+#### Layer 7: Digital Twin Queueing Simulator
+Simulates candidate fixes using M/M/k queueing models:
+- `lambda_effective = RPS * (1 - ShedRate)`
+- `W_q = P_L / (mu - lambda)`
 Predicts expected response time and error rate post-remediation.
 
-#### Layer 8 — 5-Gate Safety Policy Engine
+#### Layer 8: 5-Gate Safety Policy Engine
 Enforces 5 mandatory SRE safety gates:
 1. **Cooldown Gate**: Blocks repeat remediations within 300 seconds.
-2. **Confidence Gate**: Requires confidence score $\ge 0.95$.
+2. **Confidence Gate**: Requires confidence score >= 0.95.
 3. **Consensus Gate**: Requires multi-agent agreement.
 4. **Schema Guard**: Rejects automated database schema alterations.
 5. **Risk Guard**: Escalates non-reversible or vendor failures.
 
-#### Layer 9 — Post-Mortem Generator
+#### Layer 9: Post-Mortem Generator
 Generates structured Markdown incident post-mortems documenting root cause, blast radius, policy decision, and remediation execution logs.
 
 ---
@@ -204,14 +205,14 @@ Generates structured Markdown incident post-mortems documenting root cause, blas
 
 | Failure Archetype | Key Metric Triggers | Primary Root Cause | Recommended Playbook Fix | Safety Risk Level |
 |---|---|---|---|---|
-| **`cpu_saturation`** | CPU $\ge 95\%$, ResponseTime $\ge 2500\text{ms}$ | Compute resource exhaustion | `horizontal_scale_out` | LOW (Reversible) |
-| **`db_connection_pool_exhaustion`** | Connections $\ge 950$, DB Latency $\ge 3000\text{ms}$ | DB Connection exhaustion | `increase_db_pool_size` | LOW (Reversible) |
-| **`memory_leak`** | Memory $\ge 95\%$, Slope $> 0$ | Memory leak or OOM risk | `restart_service` | MEDIUM (Reversible) |
-| **`kafka_consumer_lag`** | Queue Depth $\ge 100$, RPS $< 50$ | Message queue backpressure | `scale_consumer_group` | LOW (Reversible) |
-| **`cache_stampede`** | Memory $\ge 90\%$, DB Latency $\ge 1000\text{ms}$ | Cache eviction surge | `flush_cache_and_warm` | LOW (Reversible) |
-| **`network_partition`** | Error Rate $\ge 40\%$, Active Conn $\le 10$ | Network isolation / drop | `trip_circuit_breaker` | MEDIUM (Reversible) |
-| **`disk_io_saturation`** | Queue Depth $\ge 80$, Latency $\ge 2000\text{ms}$ | Disk IO bottleneck | `rotate_and_compress_logs` | LOW (Reversible) |
-| **`schema_migration_deadlock`** | DB Latency $\ge 5000\text{ms}$, Error Rate $\ge 50\%$ | Lock deadlock on DDL | `human_schema_review` | **HIGH (Manual Only)** |
+| **`cpu_saturation`** | CPU >= 95%, ResponseTime >= 2500ms | Compute resource exhaustion | `horizontal_scale_out` | LOW (Reversible) |
+| **`db_connection_pool_exhaustion`** | Connections >= 950, DB Latency >= 3000ms | DB Connection exhaustion | `increase_db_pool_size` | LOW (Reversible) |
+| **`memory_leak`** | Memory >= 95%, Slope > 0 | Memory leak or OOM risk | `restart_service` | MEDIUM (Reversible) |
+| **`kafka_consumer_lag`** | Queue Depth >= 100, RPS < 50 | Message queue backpressure | `scale_consumer_group` | LOW (Reversible) |
+| **`cache_stampede`** | Memory >= 90%, DB Latency >= 1000ms | Cache eviction surge | `flush_cache_and_warm` | LOW (Reversible) |
+| **`network_partition`** | Error Rate >= 40%, Active Conn <= 10 | Network isolation / drop | `trip_circuit_breaker` | MEDIUM (Reversible) |
+| **`disk_io_saturation`** | Queue Depth >= 80, Latency >= 2000ms | Disk IO bottleneck | `rotate_and_compress_logs` | LOW (Reversible) |
+| **`schema_migration_deadlock`** | DB Latency >= 5000ms, Error Rate >= 50% | Lock deadlock on DDL | `human_schema_review` | **HIGH (Manual Only)** |
 
 ---
 
@@ -246,23 +247,23 @@ flowchart LR
 ```
 
 ### 1. Metric Telemetry Ingestion (Layer 0 Collector)
-* **Prometheus Exporter**: Scrapes microservice `/metrics` endpoints or receives OpenTelemetry metrics (gRPC `4317` / HTTP `4318`).
-* **Kafka Event Bus (`telemetry-raw`)**: Accepts raw JSON/Proto telemetry streams (`cpu`, `memory`, `response_time`, `error_rate`, `active_connections`, `queue_depth`).
-* **StatsD / Telegraf (UDP Port `8125`)**: Ingests high-frequency StatsD counters.
+- **Prometheus Exporter**: Scrapes microservice `/metrics` endpoints or receives OpenTelemetry metrics (gRPC `4317` / HTTP `4318`).
+- **Kafka Event Bus (`telemetry-raw`)**: Accepts raw JSON/Proto telemetry streams (`cpu`, `memory`, `response_time`, `error_rate`, `active_connections`, `queue_depth`).
+- **StatsD / Telegraf (UDP Port `8125`)**: Ingests high-frequency StatsD counters.
 
 ### 2. Log & Distributed Trace Streaming (Layer 4 & Log Intelligence)
-* **Kafka Log Bus (`logs-raw`)**: Log collectors (Fluentbit, Logstash, Vector) forward `stdout/stderr` logs.
-* **OpenTelemetry Tracing**: Receives HTTP trace context headers (`traceparent`) to map service-to-service call latency.
+- **Kafka Log Bus (`logs-raw`)**: Log collectors (Fluentbit, Logstash, Vector) forward `stdout/stderr` logs.
+- **OpenTelemetry Tracing**: Receives HTTP trace context headers (`traceparent`) to map service-to-service call latency.
 
 ### 3. Service Topology Discovery (Layer 6 Knowledge Graph)
-* **Kubernetes API Server Integration**: Listens to K8s pod lifecycle events (`/api/v1/namespaces/default/pods`) to dynamically map microservice dependencies and failure blast radius.
-* **REST Registration Endpoint (`POST /api/v1/topology/register`)**: Endpoints for microservices to register dependencies at boot.
+- **Kubernetes API Server Integration**: Listens to K8s pod lifecycle events (`/api/v1/namespaces/default/pods`) to dynamically map microservice dependencies and failure blast radius.
+- **REST Registration Endpoint (`POST /api/v1/topology/register`)**: Endpoints for microservices to register dependencies at boot.
 
 ### 4. Remediation & Self-Healing Execution (Layer 8 Policy Engine & Executor)
 When an `AUTO_HEAL` action is approved by all safety gates, the platform executes remediations via:
 1. **Kubernetes API Server (`https://kubernetes.default.svc:6443`)**:
-   - `horizontal_scale_out` $\rightarrow$ `kubectl scale deployment <service> --replicas=N`
-   - `restart_service` $\rightarrow$ `kubectl rollout restart deployment/<service>`
+   - `horizontal_scale_out` -> `kubectl scale deployment <service> --replicas=N`
+   - `restart_service` -> `kubectl rollout restart deployment/<service>`
 2. **Docker Engine Socket (`/var/run/docker.sock`)**: Container management for edge/on-prem deployments.
 3. **Microservice Management Webhooks (`/admin/remediate`)**: Triggers target HTTP webhooks to expand DB pools, flush Redis caches, or trip circuit breakers.
 
