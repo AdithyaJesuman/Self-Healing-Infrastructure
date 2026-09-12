@@ -1,0 +1,12 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #1a1b1e 0%, #2d2e33 100%);
+  color: #fff;
+}

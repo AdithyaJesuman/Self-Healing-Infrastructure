@@ -71,11 +71,27 @@ services:
     build: ./services/api-gateway
     container_name: api-gateway
     environment:
-      - KAFKA_BROKER=kafka:29092
+      - "KAFKA_BROKER=kafka:9092"
     ports:
-      - "8000:8000"
+      - "8001:8000"
+    volumes:
+      - ./services/api-gateway:/app
     depends_on:
       - kafka
+
+  command-center:
+    image: node:20-alpine
+    container_name: command-center
+    working_dir: /app
+    volumes:
+      - ./services/command-center:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm run preview -- --host 0.0.0.0 --port 5173"
+    depends_on:
+      - api-gateway
+
+
 
 volumes:
   influxdb-data:

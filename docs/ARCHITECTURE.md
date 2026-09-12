@@ -1,311 +1,95 @@
-# System Architecture — Full Spec
+# System Architecture Specification
 
-This is the contract. If your service follows the input/output schemas here, your AI-generated code will connect to everyone else's AI-generated code without manual glue work.
+This document provides a deep technical specification of the AIOps Autonomous Self-Healing Platform, intended for academic evaluators and systems engineers.
 
----
+## 10-Layer Pipeline Specification
 
-## 1. Full Layer Diagram
+The core of the platform is a strict, sequential 10-layer pipeline designed to transform raw telemetry into safe, automated infrastructure changes.
 
-```
-LAYER 0: DATA COLLECTION                     [Person 1]
-├─ OpenTelemetry Collectors
-├─ Kafka topic: raw-metrics
-└─ InfluxDB (raw storage)
+1.  **Layer 0: Telemetry Collector.** Gathers system metrics (psutil) and application telemetry. Uses a random-walk simulation model to simulate baseline traffic patterns and inject realistic variance.
+2.  **Layer 1: Feature Engineering.** Transforms raw metrics into 12-dimensional vectors using NumPy. Key derived features include `cpu_per_request`, `memory_leak_slope` (linear regression over time window), and Little's Law residuals (calculating expected vs actual queue depth).
+3.  **Layer 2: Anomaly Detection.** Utilizes `scikit-learn` Isolation Forest for unsupervised outlier detection, backed by a fast 3-sigma (Standard Deviation) statistical filter to catch obvious spikes without ML overhead.
+4.  **Layer 3: Signal Predictor.** Multi-signal heuristic engine that predicts impending failures before they crash the system (e.g., projecting when a memory leak will hit OOM, or projecting capacity walls).
+5.  **Layer 4: Causal Discovery.** Implements lag-1 cross-correlation and approximations of Granger Causality to determine directionality of faults (e.g., did the DB latency cause the API queue to backup, or vice versa?).
+6.  **Layer 5: Multi-Agent Brain.** A deterministic diagnosis engine utilizing 15 pre-defined SRE archetypes. Employs 4 agent types: Monitor, Diagnoser, Forecaster, and Planner. They utilize a consensus algorithm to agree on the root cause.
+7.  **Layer 6: Knowledge Graph.** Neo4j database storing topological relationships. Used to calculate "blast radius" via Breadth-First Search (BFS). If a minor service is failing, the graph reveals what critical user paths are affected.
+8.  **Layer 7: Digital Twin Simulator.** Applies M/M/1 and M/M/c queueing theory mathematics to simulate the proposed fix. 
+9.  **Layer 8: Policy Engine.** A strict safety validator applying 5 sequential gates (Cooldown, Confidence, Corroboration, Availability, Risk). Aborts unsafe fixes.
+10. **Layer 9: Post-Mortem Generator.** Synthesizes the telemetry context, diagnosis, and action taken into a comprehensive Markdown incident report.
 
-LAYER 1: FEATURE ENGINEERING                 [Person 1 + Person 2]
-├─ Rolling stats, derivatives, EWMA
-├─ Kafka topic: engineered-features
-└─ Derived features (tail_skew, cpu_per_request, etc.)
+## Event-Driven Data Flow & Kafka Topic Map
 
-LAYER 2: ANOMALY DETECTION                   [Person 1]
-├─ Isolation Forest + RRCF ensemble
-├─ Kafka topic: anomalies-detected
-└─ Output: anomaly event JSON (schema below)
+In Production (Docker) mode, data flows asynchronously via Apache Kafka.
 
-LAYER 3: FORECASTING                         [Person 2]
-├─ Prophet + PatchTST
-├─ Kafka topic: forecasts
-└─ Output: "failure predicted in X min, confidence Y%"
+| Topic Name | Producer | Consumer | Payload Schema (JSON) |
+|---|---|---|---|
+| `metrics.raw` | Layer 0 | Layer 1, TSDB | `{"ts": int, "cpu": float, "mem": float, "req_sec": int}` |
+| `metrics.features`| Layer 1 | Layer 2 | `{"ts": int, "features": [float, float...], "service": str}` |
+| `anomalies.detected`| Layer 2 | Layer 3, Layer 4 | `{"anomaly_id": uuid, "severity": str, "vector": []}` |
+| `diagnosis.proposed`| Layer 5 | Layer 7 | `{"incident_id": uuid, "archetype": str, "confidence": float}`|
+| `remediation.planned`| Layer 7 | Layer 8 | `{"action": str, "target": str, "simulated_latency": float}`|
+| `action.executed` | Layer 8 | Layer 9, UI | `{"status": "success|aborted", "reason": str}` |
 
-LAYER 4: LOG + TRACE INTELLIGENCE            [Person 2]
-├─ LogBERT / DeepLog embeddings
-├─ Kafka topic: log-anomalies
-└─ Output: log anomaly event JSON
+## Service Interaction Diagram
 
-LAYER 5: KNOWLEDGE GRAPH                     [Person 3]
-├─ Neo4j: service dependency map
-├─ Query API: blast radius, related incidents
-└─ Output: dependency context JSON
+```mermaid
+sequenceDiagram
+    participant API as Web/API Gateway
+    participant Col as Collector
+    participant Kafka as Event Bus
+    participant AD as Anomaly Detector
+    participant MA as Multi-Agent Brain
+    participant DT as Digital Twin
+    participant PE as Policy Engine
 
-LAYER 6: MULTI-AGENT REASONING               [Person 3]
-├─ Ollama (local Llama 3 / Mistral) — 8 agents (Monitoring, Diagnosis, Forecast, Planner, Risk, Validator, Executor)
-├─ Input: anomaly + forecast + log + graph context
-└─ Output: incident diagnosis + ranked fix options JSON
-
-LAYER 7: DIGITAL TWIN SIMULATION             [Person 3]
-├─ Lightweight infra clone (Docker-based)
-├─ Input: candidate fix from Layer 6
-└─ Output: simulation result JSON (success/fail, side effects, confidence)
-
-LAYER 8: POLICY + RISK ENGINE                [Person 4]
-├─ Confidence thresholds, cooldowns, corroboration checks
-├─ Input: simulation result
-└─ Output: ALLOW_AUTO_HEAL / ESCALATE_TO_HUMAN
-
-LAYER 9: SELF-HEALING EXECUTION              [Person 4]
-├─ Executes approved actions (scale, restart, reroute)
-└─ Output: execution result JSON
-
-LAYER 10: INCIDENT MEMORY                    [Person 4]
-├─ ChromaDB vector search
-├─ Stores every resolved incident
-└─ Retrieves similar past incidents for new ones
-
-LAYER 11: TRAINING DATA MANAGEMENT           [Person 1 + Person 4]
-├─ Normal Metrics DB (train on this ONLY)
-├─ Incident Logs DB (never train on this)
-└─ Gate: exclude incident window ± 30 min from training data
-
-DASHBOARD (cross-cutting)                    [Person 4]
-└─ Grafana: live metrics, active incidents, agent reasoning trail
+    Col->>Kafka: Publish `metrics.raw`
+    Kafka->>AD: Consume metrics
+    alt Anomaly Detected
+        AD->>Kafka: Publish `anomalies.detected`
+        Kafka->>MA: Consume anomaly context
+        MA->>MA: Evaluate 15 Archetypes (Consensus)
+        MA->>Kafka: Publish `diagnosis.proposed`
+        Kafka->>DT: Consume diagnosis
+        DT->>DT: Math Simulation M/M/1
+        DT->>PE: Propose safe remediation
+        PE->>PE: Evaluate 5 Safety Gates
+        alt Gates Passed
+            PE->>API: Execute Infrastructure Fix
+            PE->>Kafka: Publish `action.executed`
+        else Gates Failed
+            PE->>Kafka: Publish `action.aborted`
+        end
+    end
 ```
 
----
+## CLI vs Docker Architecture Comparison
 
-## 2. Data Flow (End to End)
+| Feature | Docker Compose Mode | Standalone Python CLI Mode |
+|---|---|---|
+| **Communication** | Async Kafka Topics | Synchronous In-Memory Function Calls |
+| **Telemetry Storage** | InfluxDB | Fixed-size In-Memory Ring Buffer (collections.deque) |
+| **Topology Data** | Neo4j Graph DB | In-Memory NetworkX Graph / Dictionary |
+| **Incident Memory** | ChromaDB (Vector Search) | In-Memory Dictionary Search |
+| **UI** | React/Vite Dashboard | Rich Terminal Output (Text/Tables) |
+| **Latency** | Network + I/O overhead | Nanosecond CPU speed |
 
-```
-Real service running (e.g. a test Flask app)
-   ↓
-Person 1: Collector reads CPU/memory/latency every 10s
-   ↓ Kafka: raw-metrics
-Person 1/2: Feature engineering computes derived features
-   ↓ Kafka: engineered-features
-Person 1: Anomaly detector flags abnormal pattern
-   ↓ Kafka: anomalies-detected
-Person 2: Forecaster adds "will get worse in X min" context
-   ↓ Kafka: forecasts
-Person 2: Log intelligence adds relevant log anomalies
-   ↓ Kafka: log-anomalies
-Person 3: Knowledge graph adds "what depends on this service"
-   ↓ (direct query, not Kafka)
-Person 3: Multi-agent system reasons over ALL of the above
-   ↓ produces ranked candidate fixes
-Person 3: Digital twin simulates top fix candidates
-   ↓ produces confidence + side-effect report
-Person 4: Policy engine decides AUTO_HEAL or ESCALATE
-   ↓
-Person 4: Executor runs the fix (if approved) or alerts human
-   ↓
-Person 4: Incident stored in memory (ChromaDB)
-   ↓
-Person 4: Dashboard shows the whole trail
-```
+## Multi-Agent Rule Engine Specification
 
----
+The Layer 5 brain avoids non-deterministic LLMs by using a matrix of boolean triggers based on the feature vector. For example, the `Connection Pool Exhaustion` archetype requires:
+*   `active_connections` >= `max_pool_size` * 0.95
+*   `query_latency` derivative is positive (increasing)
+*   `cpu_utilization` is nominal (< 70%) - *Differentiates from CPU starvation*
 
-## 3. JSON Schemas — The Contract Between Everyone
+If these exact conditions are met, the deterministic brain outputs the diagnosis with 1.0 confidence, allowing the system to proceed safely.
 
-Save these in `shared/schemas/`. Every service reads/writes exactly this shape. If you need a new field, add it here first.
+## Digital Twin: Queueing Theory Mathematics
 
-### 3.1 `raw_metric.schema.json` (Person 1 produces, everyone can read)
-```json
-{
-  "timestamp": "2026-08-08T14:32:00Z",
-  "service_name": "payment-api",
-  "instance_id": "pod-payment-api-7f8b",
-  "region": "us-east-1",
-  "metrics": {
-    "cpu_percent": 87.3,
-    "memory_percent": 62.1,
-    "response_time_ms": 340,
-    "error_rate": 2.1,
-    "throughput_rps": 1450,
-    "db_query_time_ms": 120,
-    "queue_depth": 45,
-    "active_connections": 312
-  },
-  "metadata": {
-    "deployment_id": "deploy-2026-08-08-v1.4.2",
-    "feature_flags_active": ["new_checkout_flow"]
-  }
-}
-```
+Layer 7 uses Kendall's notation (M/M/1 or M/M/c models) to simulate fixes.
+Given arrival rate $\lambda$ (requests per second) and service rate $\mu$ (requests processed per second):
 
-### 3.2 `anomaly_event.schema.json` (Person 1 produces → Person 3 consumes)
-```json
-{
-  "anomaly_id": "ANOM-20260808-001",
-  "timestamp": "2026-08-08T14:32:15Z",
-  "service_name": "payment-api",
-  "detector": "isolation_forest",
-  "confidence": 0.94,
-  "severity": "high",
-  "triggering_metrics": ["cpu_percent", "queue_depth"],
-  "raw_values": {"cpu_percent": 95.2, "queue_depth": 1200},
-  "baseline_values": {"cpu_percent": 42.0, "queue_depth": 30}
-}
-```
+Current Utilization ($\rho$) = $\lambda / \mu$
+Expected Wait Time = $1 / (\mu - \lambda)$
 
-### 3.3 `forecast_event.schema.json` (Person 2 produces → Person 3 consumes)
-```json
-{
-  "forecast_id": "FCST-20260808-001",
-  "service_name": "payment-api",
-  "predicted_incident_type": "db_connection_pool_exhaustion",
-  "time_to_incident_seconds": 300,
-  "confidence": 0.88,
-  "evidence": ["connection count climbing 5/min", "traffic forecast +30% in 3hr"]
-}
-```
-
-### 3.4 `log_anomaly.schema.json` (Person 2 produces → Person 3 consumes)
-```json
-{
-  "log_anomaly_id": "LOG-20260808-001",
-  "service_name": "payment-api",
-  "timestamp": "2026-08-08T14:32:10Z",
-  "pattern": "connection pool exhausted",
-  "raw_log_line": "ERROR: could not obtain connection from pool within 30000ms",
-  "anomaly_score": 0.91
-}
-```
-
-### 3.5 `graph_context.schema.json` (Person 3's knowledge graph → Person 3's agents)
-```json
-{
-  "service_name": "payment-api",
-  "depends_on": ["postgres-primary", "redis-cache"],
-  "depended_on_by": ["checkout-service", "order-service"],
-  "blast_radius": ["checkout-service", "order-service", "notification-service"],
-  "similar_past_incidents": ["INC-2026-01-15-001"]
-}
-```
-
-### 3.6 `agent_diagnosis.schema.json` (Person 3's multi-agent output → Person 4's policy engine)
-```json
-{
-  "incident_id": "INC-20260808-001",
-  "root_cause": "Database connection pool (size 100) exhausted under traffic spike",
-  "confidence": 0.97,
-  "agent_consensus": {
-    "monitoring_agent": 0.99,
-    "diagnosis_agent": 0.97,
-    "forecast_agent": 0.96,
-    "risk_agent": 0.95
-  },
-  "candidate_fixes": [
-    {
-      "action": "increase_db_pool_size",
-      "params": {"from": 100, "to": 150},
-      "estimated_success_rate": 0.98,
-      "reversible": true,
-      "rollback_time_seconds": 30
-    },
-    {
-      "action": "scale_db_instances",
-      "params": {"from": 2, "to": 3},
-      "estimated_success_rate": 0.90,
-      "reversible": true,
-      "rollback_time_seconds": 300
-    }
-  ]
-}
-```
-
-### 3.7 `twin_simulation_result.schema.json` (Person 3's digital twin → Person 4's policy engine)
-```json
-{
-  "incident_id": "INC-20260808-001",
-  "fix_tested": "increase_db_pool_size",
-  "simulation_success": true,
-  "predicted_error_rate_after": 0.1,
-  "predicted_latency_after_ms": 300,
-  "side_effects": [],
-  "confidence": 0.96
-}
-```
-
-### 3.8 `policy_decision.schema.json` (Person 4's policy engine output)
-```json
-{
-  "incident_id": "INC-20260808-001",
-  "decision": "AUTO_HEAL",
-  "reasoning": "Confidence 0.96 > threshold 0.95, reversible, corroborated by 3 signals",
-  "action_approved": "increase_db_pool_size",
-  "requires_human": false
-}
-```
-
-### 3.9 `incident_memory_record.schema.json` (Person 4's ChromaDB storage format)
-```json
-{
-  "incident_id": "INC-20260808-001",
-  "timestamp": "2026-08-08T14:32:00Z",
-  "symptoms": {"error_rate": 15.2, "cpu_percent": 95, "queue_depth": 1200},
-  "root_cause": "Database connection pool exhaustion",
-  "fix_applied": "increase_db_pool_size",
-  "outcome": "resolved",
-  "time_to_resolution_seconds": 240,
-  "embedding_text": "high CPU, high queue depth, DB pool exhaustion, traffic spike triggered"
-}
-```
-
----
-
-## 4. Kafka Topics (the message bus everyone shares)
-
-| Topic | Producer | Consumer |
-|-------|----------|----------|
-| `raw-metrics` | Person 1 (collector) | Person 1 (anomaly), Person 2 (forecast/features) |
-| `engineered-features` | Person 1/2 | Person 1 (anomaly detector) |
-| `anomalies-detected` | Person 1 | Person 3 (multi-agent) |
-| `forecasts` | Person 2 | Person 3 (multi-agent) |
-| `log-anomalies` | Person 2 | Person 3 (multi-agent) |
-| `incidents-diagnosed` | Person 3 | Person 4 (policy engine) |
-| `policy-decisions` | Person 4 | Person 4 (executor), Dashboard |
-| `execution-results` | Person 4 | Person 4 (incident memory), Dashboard |
-
----
-
-## 5. Training Data Management Rule (Critical — Everyone Must Follow)
-
-```
-Raw Metrics (everything, from Layer 0)
-        ↓
-   Was this a healthy period?
-   (no active alert + no open incident + within 2σ of baseline + no deployment happening)
-        ↓
-   YES → Normal Metrics DB   → Person 1 retrains anomaly models on THIS ONLY
-   NO  → Incident Logs DB    → Person 4 uses for RCA/memory, NEVER for training
-
-Rule: exclude incident window + 30 min before + 30 min after from training data.
-
-If you retrain on incident data, the model learns "98% CPU is normal" and
-stops detecting real problems. This is the single most common mistake in AIOps.
-```
-
----
-
-## 6. The 6 Incident Archetypes (Test Your System Against These)
-
-| Archetype | Chain | Correct Fix | Wrong Fix |
-|-----------|-------|-------------|-----------|
-| A. CPU Saturation | Traffic↑ → CPU↑ → Latency↑ → Errors↑ | Scale out early | Wait for error_rate confirmation |
-| B. Memory Leak | Memory slope↑ → GC pauses → OOM → Restart | Staggered graceful restart on slope | Restart 100% fleet simultaneously |
-| C. DB Pool Exhaustion | Slow queries → Pool fills → Errors | Kill long queries + widen pool | Scale app instances (adds contention) |
-| D. Disk I/O Saturation | WAL writes → Disk queue → DB slow | Check disk before CPU/memory | Assume CPU/memory without checking disk |
-| E. Healing Side Effect | Restart → cold cache → temp DB spike | Suppress alert during warm-up | Trigger second healing action |
-| F. Retry Storm | Errors↑ → Retries → RPS↑ → More errors | Rate-limit at edge | Scale out (feeds the storm) |
-
-Use these to write your test cases in Week 6-7.
-
----
-
-## 7. Guardrails (Non-Negotiable for Person 4's Policy Engine)
-
-- Debounce: require 3+ consecutive breaches, not 1 sample
-- Cooldown: no repeat action on same target within 5 min
-- Corroboration: require 2+ independent signals agreeing, not 1 metric alone
-- Blast radius limiting: stagger fleet actions, never 100% at once
-- Human escalation required for: schema changes, DB failover, anything touching data correctness
+When the proposed fix is `increase_capacity` by 2x:
+The twin calculates new expected wait time = $1 / ((2 * \mu) - \lambda)$.
+If this new wait time violates the defined SLA, or if $\rho \ge 1$ (unstable queue), the simulation fails, and the Policy Engine aborts the fix.

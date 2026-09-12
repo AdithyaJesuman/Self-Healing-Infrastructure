@@ -1,85 +1,126 @@
-# Autonomous Self-Healing AIOps Platform (Version 4.0)
+# AIOps Autonomous Self-Healing Platform
 
-![AIOps Command Center](https://img.shields.io/badge/Status-Production%20Ready-success) ![Architecture](https://img.shields.io/badge/Architecture-Event--Driven%20Microservices-blue) ![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-Active-success.svg)
+![Architecture](https://img.shields.io/badge/Architecture-Event--Driven-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Python](https://img.shields.io/badge/Python-3.11-blue.svg)
+![React](https://img.shields.io/badge/React-18-61dafb.svg)
+![Platform](https://img.shields.io/badge/Platform-Docker%20%7C%20Kubernetes-orange.svg)
 
-An enterprise-grade, fully autonomous infrastructure monitoring and self-healing system. It transcends traditional alerting tools by not only detecting anomalies but also diagnosing root causes, simulating fixes on a digital twin, and safely executing self-healing playbooks—all fully automated and deterministic with zero LLM hallucinations.
+## Executive Summary
 
----
+The **AIOps Autonomous Self-Healing Platform** is an enterprise-grade, event-driven infrastructure monitoring and autonomous self-healing system. Developed as a comprehensive capstone project, this platform addresses the critical challenge of modern Site Reliability Engineering (SRE): reducing Mean Time to Resolution (MTTR) without introducing the risks associated with non-deterministic AI remediation. 
 
-## 🚀 What Makes This Project Globally Novel?
+By employing a deterministic multi-agent brain backed by machine learning for anomaly detection, causal discovery, and a digital twin queueing theory simulator, the platform achieves zero-hallucination, sub-millisecond root cause analysis and safe autonomous remediation.
 
-Traditional AIOps platforms (e.g., Datadog, Splunk) detect issues and alert humans. Existing "AI" prototypes rely on slow, non-deterministic Large Language Models (LLMs) that hallucinate during critical outages. 
+## What Makes This Novel?
 
-This platform introduces **four cutting-edge features** that do not exist in standard commercial tools:
+While commercial tools like Datadog, Splunk, or Dynatrace provide excellent observability, they often stop at alerting or rely on non-deterministic LLMs for remediation advice. This platform introduces several novel paradigms:
 
-1. **Deterministic Multi-Agent Brain (0% Hallucination):** Instead of relying on LLMs for root-cause diagnosis, we utilize a blazingly fast (0.037ms latency), 100% deterministic rule-based matrix that maps 15+ complex failure archetypes to exact recovery playbooks.
-2. **Reinforcement Learning (RL) Digital Twin:** Before any fix is executed in production, the proposed action is simulated against a queueing-theory and RL-driven digital twin. Over time, the twin learns the exact cost/benefit ratio of different fixes.
-3. **Autonomous Chaos Engineering (Active Learning):** An embedded Auto-Chaos agent intentionally injects micro-faults (e.g., DB pool exhaustion) during safe periods to aggressively map out cause-and-effect relationships *before* real outages happen.
-4. **Federated Causal Knowledge Graph:** A Neo4j graph database maps dependencies and stores "Proven Fixes," enabling instantaneous cross-cluster "swarm immunity."
+1. **Deterministic Multi-Agent Brain**: Unlike generative AI pipelines that can hallucinate dangerous infrastructure commands, this uses a deterministic rules-engine over 15 SRE archetypes (0% hallucination, 0.037ms latency).
+2. **Digital Twin Simulation via Queueing Theory**: Before any fix is executed, a mathematical model simulates the fix against the current load. If the twin predicts failure, the fix is aborted.
+3. **Autonomous Chaos Engineering (Active Learning)**: The system can autonomously inject faults (e.g., CPU spikes, memory leaks) into itself to validate its own diagnostic pathways and populate its incident memory.
+4. **Federated Causal Knowledge Graph**: A Neo4j-backed graph tracking 8 core services, their dependencies, and the calculated blast radius of any node failure.
+5. **True Dual-Mode Operation**: Runs as a full Docker-Compose orchestrated microservice suite with a React Web UI, or as a standalone lightweight Python CLI tool for embedded environments.
 
----
+## 10-Layer Architecture Pipeline
 
-## 🧠 System Architecture & Metrics Analysis Pipeline
+```mermaid
+flowchart TD
+    subgraph Layer 0-3: Observability & Detection
+        L0[Layer 0: Telemetry Collector] --> L1
+        L1[Layer 1: Feature Engineering] --> L2
+        L2[Layer 2: Anomaly Detection] --> L3
+        L3[Layer 3: Signal Predictor]
+    end
 
-The system operates as a distributed, Twelve-Factor compliant microservice architecture heavily decoupled by **Apache Kafka**.
+    subgraph Layer 4-6: Diagnosis & Context
+        L3 --> L4
+        L4[Layer 4: Causal Discovery] --> L5
+        L5[Layer 5: Multi-Agent Brain]
+        L6[(Layer 6: Knowledge Graph)] -. Context .-> L5
+    end
 
-### Step 1: Telemetry Collection & Feature Engineering
-- **Collector (InfluxDB):** Real-time container/host metrics (CPU, Memory, DB Connection Pools, Latency, Error Rates) are streamed into InfluxDB and pushed to the `raw-metrics` Kafka topic.
-- **Metrics Analysis:** We calculate 12-dimensional feature vectors, tracking velocity (rate of change) and 3-sigma rolling baselines to catch gradual memory leaks and sudden cache stampedes.
-
-### Step 2: Adaptive Anomaly Detection
-- **Isolation Forest:** The `anomaly-detection` service utilizes an adaptive scikit-learn Isolation Forest model. It continuously retrains on recent historical data to prevent alert fatigue, automatically surfacing high-confidence outliers to the `anomalies-detected` topic.
-
-### Step 3: Multi-Agent Diagnosis & Forecasting
-- **Monitoring Agent:** Confirms the statistical severity of the anomaly.
-- **Diagnosis Agent:** Evaluates the telemetry vectors against a deterministic Causal Matrix to identify the exact root cause (e.g., `kubernetes_pod_oom_killed`).
-- **Forecast Agent:** Utilizes time-series modeling (Prophet) to calculate exact Time-To-Failure (TTF) and blast radius.
-- **Planner Agent:** Selects the optimal fix from a predefined playbook.
-
-### Step 4: Verification & Execution
-- **Digital Twin Simulation:** The fix is tested virtually.
-- **Execution:** The fix is deployed. If it fails, the system executes a pre-planned rollback.
-- **Memory (ChromaDB & Neo4j):** The successful incident signature is embedded into a ChromaDB vector database and logged in the Neo4j Knowledge Graph. Future identical incidents are solved instantly without requiring the full diagnostic pipeline.
-
----
-
-## 💻 The Bespoke AIOps Command Center
-
-The platform features a **custom, highly stylized React/Vite dashboard** (hosted via a FastAPI gateway). 
-- **Aesthetic:** Cyberpunk-inspired dark glassmorphism (no generic templates).
-- **Features:** Live data telemetry feed, AI Reasoning feed, and a **Chaos Injection** control panel that lets you manually simulate outages to watch the agents fix them in real-time.
-
----
-
-## ⚙️ Quick Start & Deployment
-
-This project requires **Docker** to run all backend databases (Kafka, InfluxDB, ChromaDB, Neo4j) and the Python microservices.
-
-### Local Development / Demo Mode
-To spin up the entire platform locally:
-```bash
-docker compose up -d --build
-```
-Once the containers are healthy, open your browser to **`http://localhost:8000`** to view the Command Center and interact with the AI agents.
-
-### Production (Kubernetes)
-For true production environments, this platform is fully containerized for Kubernetes. 
-1. Ensure your `.env` variables point to your secure secrets manager (replace the default passwords like `devpassword123`).
-2. Apply the unified manifest:
-```bash
-kubectl apply -f k8s-deployment.yaml
+    subgraph Layer 7-9: Remediation & Reporting
+        L5 --> L7
+        L7[Layer 7: Digital Twin Simulator] --> L8
+        L8[Layer 8: Policy Engine] --> L9
+        L9[Layer 9: Post-Mortem Generator]
+    end
 ```
 
----
+## Two Modes of Operation
 
-## 📂 Repository Structure
+### 1. Website Mode (Microservices)
+Runs the full event-driven architecture using Kafka, FastAPI, React, and various databases.
+```bash
+# Start all infrastructure and microservices
+docker-compose up -d
 
-*   `/services/` - The individual microservices (Collector, Detector, Agents, Digital Twin).
-*   `/shared/schemas/` - The rigid JSON schemas that define inter-service Kafka communication.
-*   `/docs/` - In-depth deployment guides and the Architectural Decision Record detailing the shift away from LLMs.
-*   `/tests/` - The robust integration and stress-testing suite (capable of validating 45,000+ events/sec).
-*   `k8s-deployment.yaml` - Kubernetes production manifests.
-*   `docker-compose.yml` - Local orchestration.
+# Access the Command Center UI:
+# http://localhost:8001/5173
+```
 
----
-*Built for absolute deterministic reliability. 100% Autonomous. Zero Hallucinations.*
+### 2. Standalone Python CLI Mode
+Runs the exact same 10-layer pipeline completely in-memory, without Docker or databases. Ideal for CI/CD testing or embedded edge devices.
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch interactive CLI
+python aiops_cli.py
+```
+
+## Technology Stack & Rationale
+
+| Domain | Technology | Rationale |
+|---|---|---|
+| **Backend API** | FastAPI (Python) | High performance, native async support, automated OpenAPI docs. |
+| **Event Bus** | Apache Kafka | Decouples services, ensures reliable event delivery for high-throughput metrics. |
+| **Frontend** | React 18, Vite, Mantine v7 | Fast compilation, robust component library for complex dashboards. |
+| **Time Series DB** | InfluxDB | Optimized for writing and querying high-velocity telemetry data. |
+| **Graph DB** | Neo4j | Essential for mapping microservice dependencies and calculating blast radius. |
+| **Vector DB** | ChromaDB | Used as an "Incident Memory" to find semantically similar past outages. |
+| **Machine Learning** | Scikit-learn (Isolation Forest) | Highly effective for unsupervised anomaly detection in high-dimensional spaces. |
+
+## Repository Structure
+```text
+aiops-platform-starter/
+├── aiops_cli.py                # Standalone CLI entrypoint
+├── docker-compose.yml          # Infrastructure orchestration
+├── requirements.txt            # Python dependencies
+├── docs/                       # Architectural documentation
+├── services/                   # Microservice source code
+│   ├── anomaly-detection/      # Isolation Forest & Feature eng
+│   ├── api-gateway/            # FastAPI entrypoint
+│   ├── causal-discovery/       # Granger causality approximations
+│   ├── collector/              # Psutil telemetry gathering
+│   ├── command-center/         # React/Vite Frontend
+│   ├── digital-twin/           # Queueing theory simulator
+│   ├── forecasting/            # Capacity wall prediction
+│   ├── incident-memory/        # ChromaDB integration
+│   ├── knowledge-graph/        # Neo4j schema and data
+│   ├── log-intelligence/       # NLP log analysis
+│   ├── multi-agent/            # Deterministic SRE brain
+│   └── policy-engine/          # Safety gates and execution
+├── shared/                     # Shared models and 50+ incident corpus
+└── tests/                      # Pytest suite
+```
+
+## Feature Highlights
+- **12-Dimensional Feature Vectors**: Calculates derived metrics like `cpu_per_request`, `memory_leak_slope`, and Little's Law residuals.
+- **5-Gate Safety Policy**: Every fix must pass Cooldown, Confidence, Corroboration, Availability, and Risk gates.
+- **Auto-Generated Post Mortems**: Markdown incident reports are generated automatically via Layer 9.
+- **Stress-Tested Performance**: Proven to handle 10,000 events in under 5 seconds in integration testing.
+
+## Screenshots / Demo
+*(Placeholder for actual application screenshots)*
+- **Command Center Dashboard**: `![Dashboard UI](./docs/assets/dashboard.png)`
+- **CLI Interactive Mode**: `![CLI Menu](./docs/assets/cli.png)`
+- **Knowledge Graph Visualization**: `![Neo4j Graph](./docs/assets/graph.png)`
+
+## Design Thought Process
+For an in-depth look at why specific algorithms, architectures, and design patterns were chosen, please read the [THOUGHT PROCESS](THOUGHT_PROCESS.md) document.
+
+## Contributing
+This is an academic capstone project. While PRs are welcome, the primary goal is architectural demonstration. Please ensure all tests pass (`pytest tests/test_aiops_platform.py`) before opening a PR.
