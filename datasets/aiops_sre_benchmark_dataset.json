@@ -1,0 +1,977 @@
+[
+  {
+    "id": "BENCH-001",
+    "name": "DB Pool Exhaustion on Payment Service",
+    "service": "payment-api",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 88.0,
+      "active_connections": 985,
+      "error_rate": 28.5,
+      "response_time_ms": 3200,
+      "throughput_rps": 850,
+      "queue_depth": 45,
+      "db_query_time_ms": 2800,
+      "memory_percent": 65.0
+    },
+    "log_snippet": "ERROR [payment-api] ActiveRecord::ConnectionTimeoutError: could not obtain a connection from the pool within 5.000 seconds",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "increase_db_pool_size"
+  },
+  {
+    "id": "BENCH-002",
+    "name": "CPU Saturation on Order Processing Service",
+    "service": "order-service",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 98.5,
+      "active_connections": 320,
+      "error_rate": 12.0,
+      "response_time_ms": 2900,
+      "throughput_rps": 1400,
+      "queue_depth": 85,
+      "db_query_time_ms": 150,
+      "memory_percent": 55.0
+    },
+    "log_snippet": "WARN [order-service] CPU utilization exceeded 95% threshold for 3 consecutive evaluation intervals",
+    "expected_root_cause": "cpu_saturation",
+    "expected_action": "scale_out"
+  },
+  {
+    "id": "BENCH-003",
+    "name": "Memory Leak on Inventory Service",
+    "service": "inventory-service",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 45.0,
+      "memory_percent": 96.8,
+      "error_rate": 8.0,
+      "response_time_ms": 1200,
+      "throughput_rps": 600,
+      "queue_depth": 20,
+      "db_query_time_ms": 80,
+      "active_connections": 150
+    },
+    "log_snippet": "SEVERE [inventory-service] java.lang.OutOfMemoryError: Java heap space during batch sync",
+    "expected_root_cause": "memory_leak",
+    "expected_action": "restart_service"
+  },
+  {
+    "id": "BENCH-004",
+    "name": "Kafka Consumer Lag on Notification Dispatcher",
+    "service": "notification-service",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 35.0,
+      "memory_percent": 50.0,
+      "queue_depth": 450,
+      "throughput_rps": 40,
+      "error_rate": 2.0,
+      "response_time_ms": 400,
+      "db_query_time_ms": 50,
+      "active_connections": 80
+    },
+    "log_snippet": "WARN [notification-service] Kafka consumer group 'email-workers' lag reached 450000 records",
+    "expected_root_cause": "kafka_consumer_lag",
+    "expected_action": "scale_consumer_group"
+  },
+  {
+    "id": "BENCH-005",
+    "name": "Redis Cache Eviction Surge on Catalog Service",
+    "service": "catalog-service",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 75.0,
+      "memory_percent": 92.0,
+      "response_time_ms": 1800,
+      "throughput_rps": 2200,
+      "error_rate": 5.0,
+      "db_query_time_ms": 1400,
+      "queue_depth": 15,
+      "active_connections": 450
+    },
+    "log_snippet": "ERROR [redis-cache] OOM command not allowed when used memory > 'maxmemory'",
+    "expected_root_cause": "cache_stampede",
+    "expected_action": "flush_redis_cache"
+  },
+  {
+    "id": "BENCH-006",
+    "name": "Database Schema Migration Deadlock",
+    "service": "postgres-primary",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [postgres-primary] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-007",
+    "name": "Ambiguous Latency Anomaly (Low Confidence)",
+    "service": "search-api",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONFIDENCE_BELOW_0.95",
+    "metrics": {
+      "cpu_percent": 62.0,
+      "memory_percent": 58.0,
+      "response_time_ms": 1450,
+      "error_rate": 6.5,
+      "throughput_rps": 500,
+      "queue_depth": 28,
+      "db_query_time_ms": 320,
+      "active_connections": 220
+    },
+    "log_snippet": "INFO [search-api] Slow query warning: search query 'filters=price_asc' took 1420ms",
+    "expected_root_cause": "unclear_degradation",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-008",
+    "name": "Active Cooldown Lockout (Repeat Incident < 5m)",
+    "service": "payment-api",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "COOLDOWN_ACTIVE",
+    "metrics": {
+      "cpu_percent": 95.0,
+      "active_connections": 980,
+      "error_rate": 35.0,
+      "response_time_ms": 4100,
+      "throughput_rps": 700,
+      "queue_depth": 110,
+      "db_query_time_ms": 3500,
+      "memory_percent": 70.0
+    },
+    "log_snippet": "WARN [policy-engine] Cooldown lock active for payment-api. Last remediation executed 45s ago.",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "cooldown_block"
+  },
+  {
+    "id": "BENCH-009",
+    "name": "Uncorroborated Agent Split-Brain",
+    "service": "auth-service",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONSENSUS_OR_CORROBORATION",
+    "metrics": {
+      "cpu_percent": 55.0,
+      "memory_percent": 60.0,
+      "error_rate": 18.0,
+      "response_time_ms": 850,
+      "throughput_rps": 900,
+      "queue_depth": 12,
+      "db_query_time_ms": 110,
+      "active_connections": 190
+    },
+    "log_snippet": "WARN [auth-service] Monitoring agent confidence=0.88, Diagnosis agent confidence=0.45 (Disagreement)",
+    "expected_root_cause": "split_brain_consensus",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-010",
+    "name": "Destructive Data Corruption / Third-Party Outage",
+    "service": "stripe-webhook-gateway",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "HIGH_RISK_THIRD_PARTY",
+    "metrics": {
+      "cpu_percent": 20.0,
+      "memory_percent": 35.0,
+      "error_rate": 99.5,
+      "response_time_ms": 15000,
+      "throughput_rps": 5,
+      "queue_depth": 800,
+      "db_query_time_ms": 40,
+      "active_connections": 30
+    },
+    "log_snippet": "ERROR [stripe-webhook] External provider HTTP 503 Service Unavailable from api.stripe.com",
+    "expected_root_cause": "third_party_vendor_outage",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-011",
+    "name": "Variant: DB Pool Exhaustion on Payment Service (microservice-11)",
+    "service": "microservice-11",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 87.2,
+      "active_connections": 985,
+      "error_rate": 28.5,
+      "response_time_ms": 3451,
+      "throughput_rps": 850,
+      "queue_depth": 45,
+      "db_query_time_ms": 2800,
+      "memory_percent": 65.0
+    },
+    "log_snippet": "ERROR [microservice-11] ActiveRecord::ConnectionTimeoutError: could not obtain a connection from the pool within 5.000 seconds",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "increase_db_pool_size"
+  },
+  {
+    "id": "BENCH-012",
+    "name": "Variant: Ambiguous Latency Anomaly (Low Confidence) (critical-core-12)",
+    "service": "critical-core-12",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONFIDENCE_BELOW_0.95",
+    "metrics": {
+      "cpu_percent": 62.0,
+      "memory_percent": 58.0,
+      "response_time_ms": 1450,
+      "error_rate": 6.5,
+      "throughput_rps": 500,
+      "queue_depth": 28,
+      "db_query_time_ms": 320,
+      "active_connections": 220
+    },
+    "log_snippet": "INFO [critical-core-12] Slow query warning: search query 'filters=price_asc' took 1420ms",
+    "expected_root_cause": "unclear_degradation",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-013",
+    "name": "Variant: DB Pool Exhaustion on Payment Service (microservice-13)",
+    "service": "microservice-13",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 85.4,
+      "active_connections": 985,
+      "error_rate": 28.5,
+      "response_time_ms": 3390,
+      "throughput_rps": 850,
+      "queue_depth": 45,
+      "db_query_time_ms": 2800,
+      "memory_percent": 65.0
+    },
+    "log_snippet": "ERROR [microservice-13] ActiveRecord::ConnectionTimeoutError: could not obtain a connection from the pool within 5.000 seconds",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "increase_db_pool_size"
+  },
+  {
+    "id": "BENCH-014",
+    "name": "Variant: Uncorroborated Agent Split-Brain (critical-core-14)",
+    "service": "critical-core-14",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONSENSUS_OR_CORROBORATION",
+    "metrics": {
+      "cpu_percent": 55.0,
+      "memory_percent": 60.0,
+      "error_rate": 18.0,
+      "response_time_ms": 850,
+      "throughput_rps": 900,
+      "queue_depth": 12,
+      "db_query_time_ms": 110,
+      "active_connections": 190
+    },
+    "log_snippet": "WARN [critical-core-14] Monitoring agent confidence=0.88, Diagnosis agent confidence=0.45 (Disagreement)",
+    "expected_root_cause": "split_brain_consensus",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-015",
+    "name": "Variant: DB Pool Exhaustion on Payment Service (microservice-15)",
+    "service": "microservice-15",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 86.5,
+      "active_connections": 985,
+      "error_rate": 28.5,
+      "response_time_ms": 3452,
+      "throughput_rps": 850,
+      "queue_depth": 45,
+      "db_query_time_ms": 2800,
+      "memory_percent": 65.0
+    },
+    "log_snippet": "ERROR [microservice-15] ActiveRecord::ConnectionTimeoutError: could not obtain a connection from the pool within 5.000 seconds",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "increase_db_pool_size"
+  },
+  {
+    "id": "BENCH-016",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-16)",
+    "service": "critical-core-16",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-16] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-017",
+    "name": "Variant: CPU Saturation on Order Processing Service (microservice-17)",
+    "service": "microservice-17",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 99.0,
+      "active_connections": 320,
+      "error_rate": 12.0,
+      "response_time_ms": 2784,
+      "throughput_rps": 1400,
+      "queue_depth": 85,
+      "db_query_time_ms": 150,
+      "memory_percent": 55.0
+    },
+    "log_snippet": "WARN [microservice-17] CPU utilization exceeded 95% threshold for 3 consecutive evaluation intervals",
+    "expected_root_cause": "cpu_saturation",
+    "expected_action": "scale_out"
+  },
+  {
+    "id": "BENCH-018",
+    "name": "Variant: Destructive Data Corruption / Third-Party Outage (critical-core-18)",
+    "service": "critical-core-18",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "HIGH_RISK_THIRD_PARTY",
+    "metrics": {
+      "cpu_percent": 20.0,
+      "memory_percent": 35.0,
+      "error_rate": 99.5,
+      "response_time_ms": 15000,
+      "throughput_rps": 5,
+      "queue_depth": 800,
+      "db_query_time_ms": 40,
+      "active_connections": 30
+    },
+    "log_snippet": "ERROR [stripe-webhook] External provider HTTP 503 Service Unavailable from api.stripe.com",
+    "expected_root_cause": "third_party_vendor_outage",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-019",
+    "name": "Variant: Kafka Consumer Lag on Notification Dispatcher (microservice-19)",
+    "service": "microservice-19",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 32.8,
+      "memory_percent": 50.0,
+      "queue_depth": 450,
+      "throughput_rps": 40,
+      "error_rate": 2.0,
+      "response_time_ms": 412,
+      "db_query_time_ms": 50,
+      "active_connections": 80
+    },
+    "log_snippet": "WARN [microservice-19] Kafka consumer group 'email-workers' lag reached 450000 records",
+    "expected_root_cause": "kafka_consumer_lag",
+    "expected_action": "scale_consumer_group"
+  },
+  {
+    "id": "BENCH-020",
+    "name": "Variant: Uncorroborated Agent Split-Brain (critical-core-20)",
+    "service": "critical-core-20",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONSENSUS_OR_CORROBORATION",
+    "metrics": {
+      "cpu_percent": 55.0,
+      "memory_percent": 60.0,
+      "error_rate": 18.0,
+      "response_time_ms": 850,
+      "throughput_rps": 900,
+      "queue_depth": 12,
+      "db_query_time_ms": 110,
+      "active_connections": 190
+    },
+    "log_snippet": "WARN [critical-core-20] Monitoring agent confidence=0.88, Diagnosis agent confidence=0.45 (Disagreement)",
+    "expected_root_cause": "split_brain_consensus",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-021",
+    "name": "Variant: Kafka Consumer Lag on Notification Dispatcher (microservice-21)",
+    "service": "microservice-21",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 34.8,
+      "memory_percent": 50.0,
+      "queue_depth": 450,
+      "throughput_rps": 40,
+      "error_rate": 2.0,
+      "response_time_ms": 397,
+      "db_query_time_ms": 50,
+      "active_connections": 80
+    },
+    "log_snippet": "WARN [microservice-21] Kafka consumer group 'email-workers' lag reached 450000 records",
+    "expected_root_cause": "kafka_consumer_lag",
+    "expected_action": "scale_consumer_group"
+  },
+  {
+    "id": "BENCH-022",
+    "name": "Variant: Ambiguous Latency Anomaly (Low Confidence) (critical-core-22)",
+    "service": "critical-core-22",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONFIDENCE_BELOW_0.95",
+    "metrics": {
+      "cpu_percent": 62.0,
+      "memory_percent": 58.0,
+      "response_time_ms": 1450,
+      "error_rate": 6.5,
+      "throughput_rps": 500,
+      "queue_depth": 28,
+      "db_query_time_ms": 320,
+      "active_connections": 220
+    },
+    "log_snippet": "INFO [critical-core-22] Slow query warning: search query 'filters=price_asc' took 1420ms",
+    "expected_root_cause": "unclear_degradation",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-023",
+    "name": "Variant: Redis Cache Eviction Surge on Catalog Service (microservice-23)",
+    "service": "microservice-23",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 75.4,
+      "memory_percent": 92.0,
+      "response_time_ms": 1958,
+      "throughput_rps": 2200,
+      "error_rate": 5.0,
+      "db_query_time_ms": 1400,
+      "queue_depth": 15,
+      "active_connections": 450
+    },
+    "log_snippet": "ERROR [redis-cache] OOM command not allowed when used memory > 'maxmemory'",
+    "expected_root_cause": "cache_stampede",
+    "expected_action": "flush_redis_cache"
+  },
+  {
+    "id": "BENCH-024",
+    "name": "Variant: Destructive Data Corruption / Third-Party Outage (critical-core-24)",
+    "service": "critical-core-24",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "HIGH_RISK_THIRD_PARTY",
+    "metrics": {
+      "cpu_percent": 20.0,
+      "memory_percent": 35.0,
+      "error_rate": 99.5,
+      "response_time_ms": 15000,
+      "throughput_rps": 5,
+      "queue_depth": 800,
+      "db_query_time_ms": 40,
+      "active_connections": 30
+    },
+    "log_snippet": "ERROR [stripe-webhook] External provider HTTP 503 Service Unavailable from api.stripe.com",
+    "expected_root_cause": "third_party_vendor_outage",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-025",
+    "name": "Variant: Redis Cache Eviction Surge on Catalog Service (microservice-25)",
+    "service": "microservice-25",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 72.1,
+      "memory_percent": 92.0,
+      "response_time_ms": 1900,
+      "throughput_rps": 2200,
+      "error_rate": 5.0,
+      "db_query_time_ms": 1400,
+      "queue_depth": 15,
+      "active_connections": 450
+    },
+    "log_snippet": "ERROR [redis-cache] OOM command not allowed when used memory > 'maxmemory'",
+    "expected_root_cause": "cache_stampede",
+    "expected_action": "flush_redis_cache"
+  },
+  {
+    "id": "BENCH-026",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-26)",
+    "service": "critical-core-26",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-26] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-027",
+    "name": "Variant: Redis Cache Eviction Surge on Catalog Service (microservice-27)",
+    "service": "microservice-27",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 74.5,
+      "memory_percent": 92.0,
+      "response_time_ms": 1816,
+      "throughput_rps": 2200,
+      "error_rate": 5.0,
+      "db_query_time_ms": 1400,
+      "queue_depth": 15,
+      "active_connections": 450
+    },
+    "log_snippet": "ERROR [redis-cache] OOM command not allowed when used memory > 'maxmemory'",
+    "expected_root_cause": "cache_stampede",
+    "expected_action": "flush_redis_cache"
+  },
+  {
+    "id": "BENCH-028",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-28)",
+    "service": "critical-core-28",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-28] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-029",
+    "name": "Variant: CPU Saturation on Order Processing Service (microservice-29)",
+    "service": "microservice-29",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 98.7,
+      "active_connections": 320,
+      "error_rate": 12.0,
+      "response_time_ms": 3004,
+      "throughput_rps": 1400,
+      "queue_depth": 85,
+      "db_query_time_ms": 150,
+      "memory_percent": 55.0
+    },
+    "log_snippet": "WARN [microservice-29] CPU utilization exceeded 95% threshold for 3 consecutive evaluation intervals",
+    "expected_root_cause": "cpu_saturation",
+    "expected_action": "scale_out"
+  },
+  {
+    "id": "BENCH-030",
+    "name": "Variant: Destructive Data Corruption / Third-Party Outage (critical-core-30)",
+    "service": "critical-core-30",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "HIGH_RISK_THIRD_PARTY",
+    "metrics": {
+      "cpu_percent": 20.0,
+      "memory_percent": 35.0,
+      "error_rate": 99.5,
+      "response_time_ms": 15000,
+      "throughput_rps": 5,
+      "queue_depth": 800,
+      "db_query_time_ms": 40,
+      "active_connections": 30
+    },
+    "log_snippet": "ERROR [stripe-webhook] External provider HTTP 503 Service Unavailable from api.stripe.com",
+    "expected_root_cause": "third_party_vendor_outage",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-031",
+    "name": "Variant: DB Pool Exhaustion on Payment Service (microservice-31)",
+    "service": "microservice-31",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 87.0,
+      "active_connections": 985,
+      "error_rate": 28.5,
+      "response_time_ms": 3471,
+      "throughput_rps": 850,
+      "queue_depth": 45,
+      "db_query_time_ms": 2800,
+      "memory_percent": 65.0
+    },
+    "log_snippet": "ERROR [microservice-31] ActiveRecord::ConnectionTimeoutError: could not obtain a connection from the pool within 5.000 seconds",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "increase_db_pool_size"
+  },
+  {
+    "id": "BENCH-032",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-32)",
+    "service": "critical-core-32",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-32] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-033",
+    "name": "Variant: Memory Leak on Inventory Service (microservice-33)",
+    "service": "microservice-33",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 42.9,
+      "memory_percent": 96.8,
+      "error_rate": 8.0,
+      "response_time_ms": 1167,
+      "throughput_rps": 600,
+      "queue_depth": 20,
+      "db_query_time_ms": 80,
+      "active_connections": 150
+    },
+    "log_snippet": "SEVERE [microservice-33] java.lang.OutOfMemoryError: Java heap space during batch sync",
+    "expected_root_cause": "memory_leak",
+    "expected_action": "restart_service"
+  },
+  {
+    "id": "BENCH-034",
+    "name": "Variant: Active Cooldown Lockout (Repeat Incident < 5m) (critical-core-34)",
+    "service": "critical-core-34",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "COOLDOWN_ACTIVE",
+    "metrics": {
+      "cpu_percent": 95.0,
+      "active_connections": 980,
+      "error_rate": 35.0,
+      "response_time_ms": 4100,
+      "throughput_rps": 700,
+      "queue_depth": 110,
+      "db_query_time_ms": 3500,
+      "memory_percent": 70.0
+    },
+    "log_snippet": "WARN [policy-engine] Cooldown lock active for critical-core-34. Last remediation executed 45s ago.",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "cooldown_block"
+  },
+  {
+    "id": "BENCH-035",
+    "name": "Variant: CPU Saturation on Order Processing Service (microservice-35)",
+    "service": "microservice-35",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 97.1,
+      "active_connections": 320,
+      "error_rate": 12.0,
+      "response_time_ms": 2848,
+      "throughput_rps": 1400,
+      "queue_depth": 85,
+      "db_query_time_ms": 150,
+      "memory_percent": 55.0
+    },
+    "log_snippet": "WARN [microservice-35] CPU utilization exceeded 95% threshold for 3 consecutive evaluation intervals",
+    "expected_root_cause": "cpu_saturation",
+    "expected_action": "scale_out"
+  },
+  {
+    "id": "BENCH-036",
+    "name": "Variant: Uncorroborated Agent Split-Brain (critical-core-36)",
+    "service": "critical-core-36",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONSENSUS_OR_CORROBORATION",
+    "metrics": {
+      "cpu_percent": 55.0,
+      "memory_percent": 60.0,
+      "error_rate": 18.0,
+      "response_time_ms": 850,
+      "throughput_rps": 900,
+      "queue_depth": 12,
+      "db_query_time_ms": 110,
+      "active_connections": 190
+    },
+    "log_snippet": "WARN [critical-core-36] Monitoring agent confidence=0.88, Diagnosis agent confidence=0.45 (Disagreement)",
+    "expected_root_cause": "split_brain_consensus",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-037",
+    "name": "Variant: CPU Saturation on Order Processing Service (microservice-37)",
+    "service": "microservice-37",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 98.1,
+      "active_connections": 320,
+      "error_rate": 12.0,
+      "response_time_ms": 3092,
+      "throughput_rps": 1400,
+      "queue_depth": 85,
+      "db_query_time_ms": 150,
+      "memory_percent": 55.0
+    },
+    "log_snippet": "WARN [microservice-37] CPU utilization exceeded 95% threshold for 3 consecutive evaluation intervals",
+    "expected_root_cause": "cpu_saturation",
+    "expected_action": "scale_out"
+  },
+  {
+    "id": "BENCH-038",
+    "name": "Variant: Destructive Data Corruption / Third-Party Outage (critical-core-38)",
+    "service": "critical-core-38",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "HIGH_RISK_THIRD_PARTY",
+    "metrics": {
+      "cpu_percent": 20.0,
+      "memory_percent": 35.0,
+      "error_rate": 99.5,
+      "response_time_ms": 15000,
+      "throughput_rps": 5,
+      "queue_depth": 800,
+      "db_query_time_ms": 40,
+      "active_connections": 30
+    },
+    "log_snippet": "ERROR [stripe-webhook] External provider HTTP 503 Service Unavailable from api.stripe.com",
+    "expected_root_cause": "third_party_vendor_outage",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-039",
+    "name": "Variant: DB Pool Exhaustion on Payment Service (microservice-39)",
+    "service": "microservice-39",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 88.5,
+      "active_connections": 985,
+      "error_rate": 28.5,
+      "response_time_ms": 3133,
+      "throughput_rps": 850,
+      "queue_depth": 45,
+      "db_query_time_ms": 2800,
+      "memory_percent": 65.0
+    },
+    "log_snippet": "ERROR [microservice-39] ActiveRecord::ConnectionTimeoutError: could not obtain a connection from the pool within 5.000 seconds",
+    "expected_root_cause": "db_connection_pool_exhaustion",
+    "expected_action": "increase_db_pool_size"
+  },
+  {
+    "id": "BENCH-040",
+    "name": "Variant: Ambiguous Latency Anomaly (Low Confidence) (critical-core-40)",
+    "service": "critical-core-40",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "LOW_CONFIDENCE_BELOW_0.95",
+    "metrics": {
+      "cpu_percent": 62.0,
+      "memory_percent": 58.0,
+      "response_time_ms": 1450,
+      "error_rate": 6.5,
+      "throughput_rps": 500,
+      "queue_depth": 28,
+      "db_query_time_ms": 320,
+      "active_connections": 220
+    },
+    "log_snippet": "INFO [critical-core-40] Slow query warning: search query 'filters=price_asc' took 1420ms",
+    "expected_root_cause": "unclear_degradation",
+    "expected_action": "escalate"
+  },
+  {
+    "id": "BENCH-041",
+    "name": "Variant: Memory Leak on Inventory Service (microservice-41)",
+    "service": "microservice-41",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 45.8,
+      "memory_percent": 96.8,
+      "error_rate": 8.0,
+      "response_time_ms": 1172,
+      "throughput_rps": 600,
+      "queue_depth": 20,
+      "db_query_time_ms": 80,
+      "active_connections": 150
+    },
+    "log_snippet": "SEVERE [microservice-41] java.lang.OutOfMemoryError: Java heap space during batch sync",
+    "expected_root_cause": "memory_leak",
+    "expected_action": "restart_service"
+  },
+  {
+    "id": "BENCH-042",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-42)",
+    "service": "critical-core-42",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-42] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-043",
+    "name": "Variant: Memory Leak on Inventory Service (microservice-43)",
+    "service": "microservice-43",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 44.8,
+      "memory_percent": 96.8,
+      "error_rate": 8.0,
+      "response_time_ms": 1180,
+      "throughput_rps": 600,
+      "queue_depth": 20,
+      "db_query_time_ms": 80,
+      "active_connections": 150
+    },
+    "log_snippet": "SEVERE [microservice-43] java.lang.OutOfMemoryError: Java heap space during batch sync",
+    "expected_root_cause": "memory_leak",
+    "expected_action": "restart_service"
+  },
+  {
+    "id": "BENCH-044",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-44)",
+    "service": "critical-core-44",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-44] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-045",
+    "name": "Variant: Redis Cache Eviction Surge on Catalog Service (microservice-45)",
+    "service": "microservice-45",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 75.1,
+      "memory_percent": 92.0,
+      "response_time_ms": 1864,
+      "throughput_rps": 2200,
+      "error_rate": 5.0,
+      "db_query_time_ms": 1400,
+      "queue_depth": 15,
+      "active_connections": 450
+    },
+    "log_snippet": "ERROR [redis-cache] OOM command not allowed when used memory > 'maxmemory'",
+    "expected_root_cause": "cache_stampede",
+    "expected_action": "flush_redis_cache"
+  },
+  {
+    "id": "BENCH-046",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-46)",
+    "service": "critical-core-46",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-46] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-047",
+    "name": "Variant: CPU Saturation on Order Processing Service (microservice-47)",
+    "service": "microservice-47",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 96.1,
+      "active_connections": 320,
+      "error_rate": 12.0,
+      "response_time_ms": 3067,
+      "throughput_rps": 1400,
+      "queue_depth": 85,
+      "db_query_time_ms": 150,
+      "memory_percent": 55.0
+    },
+    "log_snippet": "WARN [microservice-47] CPU utilization exceeded 95% threshold for 3 consecutive evaluation intervals",
+    "expected_root_cause": "cpu_saturation",
+    "expected_action": "scale_out"
+  },
+  {
+    "id": "BENCH-048",
+    "name": "Variant: Database Schema Migration Deadlock (critical-core-48)",
+    "service": "critical-core-48",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "SCHEMA_CHANGE_REQUIRES_HUMAN",
+    "metrics": {
+      "cpu_percent": 92.0,
+      "active_connections": 990,
+      "error_rate": 65.0,
+      "response_time_ms": 8500,
+      "throughput_rps": 120,
+      "queue_depth": 210,
+      "db_query_time_ms": 7800,
+      "memory_percent": 80.0
+    },
+    "log_snippet": "FATAL [critical-core-48] deadlock detected during ALTER TABLE ADD COLUMN; process 45823 waiting for ExclusiveLock",
+    "expected_root_cause": "schema_migration_deadlock",
+    "expected_action": "human_schema_review"
+  },
+  {
+    "id": "BENCH-049",
+    "name": "Variant: Kafka Consumer Lag on Notification Dispatcher (microservice-49)",
+    "service": "microservice-49",
+    "expected_healing": "AUTO_HEAL",
+    "metrics": {
+      "cpu_percent": 35.6,
+      "memory_percent": 50.0,
+      "queue_depth": 450,
+      "throughput_rps": 40,
+      "error_rate": 2.0,
+      "response_time_ms": 398,
+      "db_query_time_ms": 50,
+      "active_connections": 80
+    },
+    "log_snippet": "WARN [microservice-49] Kafka consumer group 'email-workers' lag reached 450000 records",
+    "expected_root_cause": "kafka_consumer_lag",
+    "expected_action": "scale_consumer_group"
+  },
+  {
+    "id": "BENCH-050",
+    "name": "Variant: Destructive Data Corruption / Third-Party Outage (critical-core-50)",
+    "service": "critical-core-50",
+    "expected_healing": "ESCALATE_TO_HUMAN",
+    "reason_code": "HIGH_RISK_THIRD_PARTY",
+    "metrics": {
+      "cpu_percent": 20.0,
+      "memory_percent": 35.0,
+      "error_rate": 99.5,
+      "response_time_ms": 15000,
+      "throughput_rps": 5,
+      "queue_depth": 800,
+      "db_query_time_ms": 40,
+      "active_connections": 30
+    },
+    "log_snippet": "ERROR [stripe-webhook] External provider HTTP 503 Service Unavailable from api.stripe.com",
+    "expected_root_cause": "third_party_vendor_outage",
+    "expected_action": "escalate"
+  }
+]
