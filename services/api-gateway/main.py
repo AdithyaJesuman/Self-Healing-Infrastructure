@@ -120,6 +120,8 @@ class InjectRequest(BaseModel):
     incident_type: Optional[str] = None
     severity: Optional[str] = "high"
     service: Optional[str] = "api-gateway"
+    company_id: Optional[str] = "Acme-Corp"
+    tenant_id: Optional[str] = "tenant-001"
 
 
 @app.post("/inject")
@@ -128,15 +130,20 @@ async def inject_anomaly(request: InjectRequest):
     """
     Simulates a failure by pushing a highly anomalous metric event 
     directly to 'raw-metrics' to trigger the pipeline instantly.
+    Tagged with company_id / tenant_id for multi-tenant isolation.
     """
     kind = request.incident_type or request.type or "cpu_spike"
     now = datetime.datetime.utcnow().isoformat() + "Z"
+    cid = request.company_id or "Acme-Corp"
+    tid = request.tenant_id or "tenant-001"
     
     mock_metric = {
         "event_id": f"EVT-{str(uuid.uuid4())[:8]}",
+        "company_id": cid,
+        "tenant_id": tid,
         "timestamp": now,
         "service_name": request.service or "api-gateway",
-        "instance_id": "pod-demo-001",
+        "instance_id": f"pod-{cid.lower()}-001",
         "region": "us-east",
         "cpu_percent": 98 if "cpu" in kind else 35,
         "memory_percent": 95 if "memory" in kind else 42,
@@ -159,7 +166,100 @@ async def inject_anomaly(request: InjectRequest):
     except Exception as e:
         print(f"Kafka producer note: {e}")
 
-    return {"status": "injected", "type": kind, "payload": mock_metric}
+    return {"status": "injected", "type": kind, "company_id": cid, "tenant_id": tid, "payload": mock_metric}
+
+
+@app.post("/api/upload-csv")
+async def upload_csv(file: Request, company_id: Optional[str] = "Acme-Corp"):
+    """
+    Company Data Ingestion Endpoint:
+    Accepts CSV metric files uploaded by a company, tagged with company_id for multi-tenant isolation.
+    """
+    import io
+    import csv
+    body = await file.body()
+    content = body.decode("utf-8", errors="ignore")
+    lines = content.strip().splitlines()
+    
+    if not lines:
+        return JSONResponse(status_code=400, content={"error": "Empty CSV file provided"})
+        
+    reader = csv.DictReader(lines)
+    records = []
+    anomalies_found = []
+    cid = company_id or "Acme-Corp"
+    
+    for i, row in enumerate(reader):
+        try:
+            cpu = float(row.get("cpu", row.get("cpu_percent", row.get("value", 50.0))))
+            mem = float(row.get("memory", row.get("memory_percent", 40.0)))
+            rt = float(row.get("response_time_ms", row.get("response_time", row.get("latency", 100.0))))
+            err = float(row.get("error_rate", row.get("errors", 0.0)))
+            ts = row.get("timestamp", row.get("time", datetime.datetime.utcnow().isoformat()))
+            
+            rec = {
+                "company_id": cid,
+                "timestamp": ts,
+                "cpu_percent": cpu,
+                "memory_percent": mem,
+                "response_time_ms": rt,
+                "error_rate": err
+            }
+            records.append(rec)
+            
+            if cpu >= 85.0 or mem >= 90.0 or err >= 25.0 or rt >= 2000.0:
+                anomalies_found.append({
+                    "row": i + 1,
+                    "company_id": cid,
+                    "timestamp": ts,
+                    "metrics": rec,
+                    "root_cause": "cpu_saturation" if cpu >= 85 else "memory_leak" if mem >= 90 else "network_partition" if err >= 25 else "latency_degradation",
+                    "action": "horizontal_scale_out" if cpu >= 85 else "restart_service"
+                })
+        except Exception:
+            continue
+            
+    return {
+        "company_id": cid,
+        "filename": getattr(file, "filename", "company_data.csv"),
+        "total_records_processed": len(records),
+        "anomalies_detected_count": len(anomalies_found),
+        "anomalies": anomalies_found[:20],
+        "message": f"Successfully ingested {len(records)} records from CSV for {cid}. Identified {len(anomalies_found)} anomaly events."
+    }
+
+
+@app.get("/api/benchmark-results")
+def get_benchmark_results():
+    """
+    Syncs and serves the 49-Dataset NAB ML Benchmark and 50-Scenario Self-Healing Audit logs directly to the Web UI.
+    """
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+    
+    ult_file = os.path.join(logs_dir, "ultimate_datasets_execution_logs.json")
+    heal_file = os.path.join(logs_dir, "self_healing_execution_logs.json")
+    
+    ult_data = {}
+    heal_data = {}
+    
+    if os.path.exists(ult_file):
+        try:
+            with open(ult_file, "r") as f:
+                ult_data = json.load(f)
+        except Exception: pass
+        
+    if os.path.exists(heal_file):
+        try:
+            with open(heal_file, "r") as f:
+                heal_data = json.load(f)
+        except Exception: pass
+        
+    return {
+        "status": "success",
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "ml_benchmark": ult_data,
+        "self_healing_audit": heal_data
+    }
 
 
 @app.get("/api/incidents")

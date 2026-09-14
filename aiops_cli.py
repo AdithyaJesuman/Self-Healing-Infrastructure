@@ -1038,6 +1038,72 @@ BANNER = r"""
     ╚═══════════════════════════════════════════════════════════════╝
 """
 
+def cmd_csv(csv_path: str):
+    """Ingest and evaluate a company CSV file containing metric time-series data."""
+    import csv
+    print_rule(f"Company CSV Ingestion: {os.path.basename(csv_path)}")
+    
+    if not os.path.exists(csv_path):
+        cprint(f"[bold red]Error: CSV file '{csv_path}' not found.[/bold red]")
+        return
+        
+    records = []
+    anomalies = []
+    
+    try:
+        with open(csv_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for i, row in enumerate(reader):
+                cpu = float(row.get("cpu", row.get("cpu_percent", row.get("value", 50.0))))
+                mem = float(row.get("memory", row.get("memory_percent", 40.0)))
+                rt = float(row.get("response_time_ms", row.get("response_time", row.get("latency", 100.0))))
+                err = float(row.get("error_rate", row.get("errors", 0.0)))
+                ts = row.get("timestamp", row.get("time", datetime.now(timezone.utc).isoformat()))
+                
+                m = {
+                    "cpu_percent": cpu,
+                    "memory_percent": mem,
+                    "response_time_ms": rt,
+                    "error_rate": err,
+                    "throughput_rps": float(row.get("throughput_rps", row.get("rps", 1000))),
+                    "active_connections": float(row.get("active_connections", 150)),
+                    "queue_depth": float(row.get("queue_depth", 10)),
+                    "db_query_time_ms": float(row.get("db_query_time_ms", 50))
+                }
+                records.append(m)
+                
+                if cpu >= 85.0 or mem >= 90.0 or err >= 25.0 or rt >= 2000.0:
+                    anomalies.append((i+1, ts, m, {
+                        "severity": "critical" if cpu >= 95 or err >= 40 else "high",
+                        "confidence": min(0.99, 0.85 + (cpu/100.0)*0.14)
+                    }))
+    except Exception as e:
+        cprint(f"[bold red]Failed to parse CSV file: {e}[/bold red]")
+        return
+
+    cprint(f"[bold green]✓ Ingested {len(records)} records from CSV file.[/bold green]")
+    cprint(f"[bold yellow]⚠ Identified {len(anomalies)} anomaly event(s).[/bold yellow]\n")
+
+    if console and anomalies:
+        t = Table(title="CSV Anomaly Diagnosis Log", box=box.ROUNDED)
+        t.add_column("Row #", style="dim", width=6)
+        t.add_column("Timestamp", style="cyan")
+        t.add_column("Metrics", style="white")
+        t.add_column("Severity", style="bold red")
+        t.add_column("Confidence", style="bold green")
+        for row_num, ts, m, anom in anomalies[:15]:
+            t.add_row(
+                str(row_num), ts[:19],
+                f"CPU={m['cpu_percent']}% MEM={m['memory_percent']}% Latency={m['response_time_ms']}ms",
+                anom.get("severity", "high"),
+                f"{anom.get('confidence', 0.85):.0%}"
+            )
+        console.print(t)
+    elif anomalies:
+        for row_num, ts, m, anom in anomalies[:15]:
+            print(f"Row {row_num} [{ts}]: Severity={anom.get('severity')} Conf={anom.get('confidence')}")
+
+
 HELP_TEXT = """
   [cyan]status[/cyan]                  — System architecture & topology overview
   [cyan]monitor[/cyan] [secs]          — Live metrics stream (default: 30s)
@@ -1048,6 +1114,7 @@ HELP_TEXT = """
                                    db_pool_exhaustion, kafka_lag
   [cyan]twin[/cyan] <action>           — Digital twin simulation
   [cyan]incidents[/cyan] [search]      — Browse incident memory corpus
+  [cyan]csv[/cyan] <path_to_file.csv>   — Ingest and diagnose a company CSV file
   [cyan]qa[/cyan]                      — Run QA test suite (15 checks)
   [cyan]pipeline[/cyan]                — Full end-to-end pipeline
   [cyan]help[/cyan]                    — Show this help
@@ -1100,6 +1167,9 @@ def interactive_mode():
         elif cmd == "incidents":
             search = " ".join(args) if args else ""
             cmd_incidents(search)
+        elif cmd == "csv":
+            path = args[0] if args else "datasets/all_real_datasets/realAWSCloudwatch__ec2_cpu_utilization_24ae8d.csv"
+            cmd_csv(path)
         elif cmd == "qa":
             cmd_qa()
         elif cmd == "pipeline":
@@ -1120,6 +1190,7 @@ def main():
 Examples:
   python aiops_cli.py                    # Interactive menu
   python aiops_cli.py pipeline           # Run full pipeline
+  python aiops_cli.py csv path/file.csv  # Ingest company CSV
   python aiops_cli.py chaos cpu_spike    # Inject CPU fault
   python aiops_cli.py incidents          # Browse incident memory
   python aiops_cli.py qa                 # Run QA tests
@@ -1130,7 +1201,7 @@ Examples:
     )
     parser.add_argument("command", nargs="?", default=None,
                         choices=["pipeline", "chaos", "incidents", "qa", "monitor",
-                                 "status", "detect", "diagnose", "twin", "help"],
+                                 "status", "detect", "diagnose", "twin", "csv", "help"],
                         help="Command to run (omit for interactive mode)")
     parser.add_argument("args", nargs="*", default=[],
                         help="Additional arguments for the command")
@@ -1168,6 +1239,8 @@ Examples:
         cmd_diagnose()
     elif cmd == "twin":
         cmd_twin(args[0] if args else "increase_db_pool_size")
+    elif cmd == "csv":
+        cmd_csv(args[0] if args else "datasets/all_real_datasets/realAWSCloudwatch__ec2_cpu_utilization_24ae8d.csv")
     elif cmd == "help":
         parser.print_help()
 
