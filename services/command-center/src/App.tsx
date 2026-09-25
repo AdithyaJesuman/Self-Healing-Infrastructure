@@ -10,19 +10,24 @@ import ChaosPanel from './routes/ChaosPanel';
 import DocsViewer from './routes/DocsViewer';
 import TestsRunner from './routes/TestsRunner';
 import CsvAnalyzer from './routes/CsvAnalyzer';
+import LiveLogIntelligence from './routes/LiveLogIntelligence';
+import DigitalTwinStudio from './routes/DigitalTwinStudio';
+import CausalGraphStudio from './routes/CausalGraphStudio';
 import Login from './routes/Login';
 import { useAuth } from './hooks/useAuth';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Live Telemetry', icon: '📊', badge: 'LIVE' },
-  { path: '/csv-analyzer', label: 'CSV Ingestion & Analyzer', icon: '📁', badge: 'NEW' },
-  { path: '/overview', label: 'Topology & KPIs', icon: '⚡' },
+  { path: '/logs', label: 'Log Intelligence', icon: '📋', badge: 'AI' },
+  { path: '/twin', label: 'Digital Twin Studio', icon: '🔮' },
+  { path: '/graph', label: 'Causal Graph & RCA', icon: '🕸️' },
+  { path: '/csv-analyzer', label: 'CSV Ingestion & Analyzer', icon: '📁' },
+  { path: '/overview', label: 'Topology & Mesh', icon: '⚡' },
   { path: '/incidents', label: 'Incident Memory', icon: '🧠' },
   { path: '/chaos', label: 'Chaos Lab', icon: '💥' },
   { path: '/tests', label: 'QA Runner', icon: '🧪' },
   { path: '/docs', label: 'Architecture Docs', icon: '📖' },
 ];
-
 
 export default function App() {
   const { user, logout } = useAuth();
@@ -129,9 +134,9 @@ export default function App() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: isActive ? 600 : 500,
                   color: isActive ? '#38bdf8' : '#cbd5e1',
                   background: isActive ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
@@ -165,6 +170,9 @@ export default function App() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<LiveDashboard />} />
             <Route path="/dashboard" element={<LiveDashboard />} />
+            <Route path="/logs" element={<LiveLogIntelligence />} />
+            <Route path="/twin" element={<DigitalTwinStudio />} />
+            <Route path="/graph" element={<CausalGraphStudio />} />
             <Route path="/csv-analyzer" element={<CsvAnalyzer />} />
             <Route path="/overview" element={<Overview />} />
             <Route path="/incidents" element={<IncidentMemory />} />
@@ -179,5 +187,3 @@ export default function App() {
     </AppShell>
   );
 }
-
-
