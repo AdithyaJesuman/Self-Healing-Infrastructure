@@ -9,11 +9,13 @@ import IncidentMemory from './routes/IncidentMemory';
 import ChaosPanel from './routes/ChaosPanel';
 import DocsViewer from './routes/DocsViewer';
 import TestsRunner from './routes/TestsRunner';
+import CsvAnalyzer from './routes/CsvAnalyzer';
 import Login from './routes/Login';
 import { useAuth } from './hooks/useAuth';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Live Telemetry', icon: '📊', badge: 'LIVE' },
+  { path: '/csv-analyzer', label: 'CSV Ingestion & Analyzer', icon: '📁', badge: 'NEW' },
   { path: '/overview', label: 'Topology & KPIs', icon: '⚡' },
   { path: '/incidents', label: 'Incident Memory', icon: '🧠' },
   { path: '/chaos', label: 'Chaos Lab', icon: '💥' },
@@ -163,6 +165,7 @@ export default function App() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<LiveDashboard />} />
             <Route path="/dashboard" element={<LiveDashboard />} />
+            <Route path="/csv-analyzer" element={<CsvAnalyzer />} />
             <Route path="/overview" element={<Overview />} />
             <Route path="/incidents" element={<IncidentMemory />} />
             <Route path="/chaos" element={<ChaosPanel />} />

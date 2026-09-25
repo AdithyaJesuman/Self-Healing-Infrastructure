@@ -1,0 +1,16 @@
+timestamp,company_id,service_name,cpu_percent,memory_percent,response_time_ms,throughput_rps,error_rate,active_connections,db_query_time_ms,queue_depth
+2026-09-25T06:52:57.041378+00:00,FinTech-Global,payment-gateway,32.5,41.0,120,1200,0.1,150,45,5
+2026-09-25T06:53:07.041378+00:00,FinTech-Global,payment-gateway,33.0,41.2,125,1200,0.1,150,45,5
+2026-09-25T06:53:17.041378+00:00,FinTech-Global,payment-gateway,33.5,41.4,130,1200,0.1,150,45,5
+2026-09-25T06:53:27.041378+00:00,FinTech-Global,payment-gateway,34.0,41.6,135,1200,0.1,150,45,5
+2026-09-25T06:53:37.041378+00:00,FinTech-Global,payment-gateway,34.5,41.8,140,1200,0.1,150,45,5
+2026-09-25T06:53:47.041378+00:00,FinTech-Global,payment-gateway,96.8,88.0,3200,450,28.5,980,2800,140
+2026-09-25T06:53:57.041378+00:00,FinTech-Global,payment-gateway,97.3,90.0,3600,400,33.5,990,3100,170
+2026-09-25T06:54:07.041378+00:00,FinTech-Global,payment-gateway,97.8,92.0,4000,350,38.5,1000,3400,200
+2026-09-25T06:54:17.041378+00:00,FinTech-Global,payment-gateway,98.3,94.0,4400,300,43.5,1010,3700,230
+2026-09-25T06:54:27.041378+00:00,FinTech-Global,payment-gateway,98.8,96.0,4800,250,48.5,1020,4000,260
+2026-09-25T06:54:37.041378+00:00,FinTech-Global,payment-gateway,35.0,42.0,130,1150,0.2,160,50,6
+2026-09-25T06:54:47.041378+00:00,FinTech-Global,payment-gateway,34.0,41.5,128,1150,0.2,160,50,6
+2026-09-25T06:54:57.041378+00:00,FinTech-Global,payment-gateway,33.0,41.0,126,1150,0.2,160,50,6
+2026-09-25T06:55:07.041378+00:00,FinTech-Global,payment-gateway,32.0,40.5,124,1150,0.2,160,50,6
+2026-09-25T06:55:17.041378+00:00,FinTech-Global,payment-gateway,31.0,40.0,122,1150,0.2,160,50,6
