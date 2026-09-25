@@ -9,13 +9,13 @@ interface MetricCardProps {
   value: string | number;
   unit?: string;
   change?: string;
-  trend?: 'up' | 'down' | 'neutral';
-  status?: 'healthy' | 'warning' | 'critical' | 'info';
+  trend?: string;
+  status?: string;
   subtitle?: string;
   icon?: React.ReactNode;
 }
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   healthy: '#10B981', // emerald
   warning: '#F59E0B', // amber
   critical: '#EF4444', // red
@@ -27,47 +27,56 @@ export default function MetricCard({
   value,
   unit,
   change,
-  trend = 'neutral',
+  trend,
   status = 'healthy',
   subtitle,
   icon,
 }: MetricCardProps) {
-  const accent = statusColors[status];
+  const accent = statusColors[status] || '#10B981';
 
   return (
     <GlassCard glowColor={accent}>
       <Stack gap="xs">
         <Group justify="space-between" align="center">
           <Group gap="xs">
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: accent,
+                boxShadow: `0 0 8px ${accent}`
+              }}
+            />
             {icon && <span style={{ color: accent }}>{icon}</span>}
-            <Title order={6} c="dimmed" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.75rem' }}>
+            <Title order={6} c="dimmed" style={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '0.68rem', fontWeight: 700 }}>
               {title}
             </Title>
           </Group>
           {change && (
             <Badge
-              size="sm"
-              variant="light"
-              color={trend === 'up' ? (status === 'critical' ? 'red' : 'green') : trend === 'down' ? 'blue' : 'gray'}
+              size="xs"
+              variant="filled"
+              color={status === 'critical' ? 'red' : 'teal'}
             >
               {change}
             </Badge>
           )}
         </Group>
 
-        <Group align="baseline" gap="xs">
+        <Group align="baseline" gap="xs" mt={2}>
           <motion.div
             key={String(value)}
-            initial={{ scale: 1.08, opacity: 0.8 }}
+            initial={{ scale: 1.05, opacity: 0.8 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
           >
             <Text
               c="white"
               style={{
-                fontSize: '1.85rem',
-                fontWeight: 700,
-                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontSize: '1.9rem',
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
                 lineHeight: 1.1,
               }}
             >
@@ -75,14 +84,14 @@ export default function MetricCard({
             </Text>
           </motion.div>
           {unit && (
-            <Text c="dimmed" size="sm" fw={600}>
+            <Text c="dimmed" size="xs" fw={600}>
               {unit}
             </Text>
           )}
         </Group>
 
         {subtitle && (
-          <Text c="dimmed" size="xs" style={{ opacity: 0.85 }}>
+          <Text c="dimmed" size="xs" style={{ opacity: 0.8, fontSize: '0.72rem' }}>
             {subtitle}
           </Text>
         )}
@@ -90,4 +99,3 @@ export default function MetricCard({
     </GlassCard>
   );
 }
-
