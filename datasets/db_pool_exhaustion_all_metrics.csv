@@ -1,0 +1,11 @@
+timestamp,company_id,service_name,cpu_percent,memory_percent,response_time_ms,error_rate,active_connections,throughput_rps,queue_depth,db_query_time_ms
+2026-09-25T14:00:00Z,Acme-Corp,payment-api,42.0,55.0,120.0,0.1,220,1200,8,35.0
+2026-09-25T14:01:00Z,Acme-Corp,payment-api,45.0,56.0,135.0,0.1,250,1250,10,38.0
+2026-09-25T14:02:00Z,Acme-Corp,payment-api,48.0,57.0,150.0,0.2,290,1300,12,42.0
+2026-09-25T14:03:00Z,Acme-Corp,payment-api,55.0,58.0,280.0,0.5,450,1350,15,180.0
+2026-09-25T14:04:00Z,Acme-Corp,payment-api,68.0,60.0,650.0,2.1,720,1400,22,650.0
+2026-09-25T14:05:00Z,Acme-Corp,payment-api,78.0,62.0,1400.0,8.5,890,1100,35,1600.0
+2026-09-25T14:06:00Z,Acme-Corp,payment-api,88.5,65.0,3200.0,28.5,985,850,48,2850.0
+2026-09-25T14:07:00Z,Acme-Corp,payment-api,91.0,66.0,3800.0,34.0,995,780,55,3200.0
+2026-09-25T14:08:00Z,Acme-Corp,payment-api,93.5,67.0,4200.0,38.5,1000,720,60,3500.0
+2026-09-25T14:09:00Z,Acme-Corp,payment-api,89.0,65.0,2900.0,22.0,960,890,40,2400.0

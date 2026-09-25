@@ -1,0 +1,11 @@
+timestamp,service_name,cpu_percent,memory_percent,response_time_ms,error_rate,active_connections,throughput_rps,queue_depth,db_query_time_ms
+2026-09-25T14:00:00Z,inventory-service,30.0,45.0,85.0,0.0,150,600,4,20.0
+2026-09-25T14:01:00Z,inventory-service,31.0,52.0,90.0,0.0,155,610,4,21.0
+2026-09-25T14:02:00Z,inventory-service,32.0,61.0,110.0,0.0,160,620,5,22.0
+2026-09-25T14:03:00Z,inventory-service,33.0,72.0,140.0,0.1,165,625,6,23.0
+2026-09-25T14:04:00Z,inventory-service,35.0,83.0,220.0,0.5,170,630,8,25.0
+2026-09-25T14:05:00Z,inventory-service,38.0,92.5,580.0,2.0,180,635,12,30.0
+2026-09-25T14:06:00Z,inventory-service,42.0,97.8,1450.0,8.5,190,640,18,38.0
+2026-09-25T14:07:00Z,inventory-service,45.0,99.2,2100.0,14.0,200,600,25,45.0
+2026-09-25T14:08:00Z,inventory-service,40.0,96.5,1600.0,7.0,185,620,15,35.0
+2026-09-25T14:09:00Z,inventory-service,36.0,91.0,850.0,3.0,175,630,10,28.0

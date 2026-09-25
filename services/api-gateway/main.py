@@ -184,53 +184,88 @@ async def inject_anomaly(request: InjectRequest):
 
 def diagnose_root_cause(rec: dict, filename: str = "") -> tuple:
     """
-    Multi-dimensional failure archetype classifier mapping metric vectors and filename signatures 
-    across enterprise failure modes (DB pool, memory leak, network partition, thermal throttling, 
-    capacity wall breach, consumer lag, latency degradation, CPU saturation).
+    Multi-Metric Composite Vector Scoring Engine:
+    Evaluates ALL telemetry signals TOGETHER (CPU, Memory, Latency, Error Rate, Active Connections, 
+    Throughput RPS, Queue Depth, DB Query Time, Little's Law Residual) to compute a weighted 
+    archetype match matrix across all enterprise failure modes.
     """
     fname = filename.lower()
-    cpu = rec.get("cpu_percent", 0.0)
-    mem = rec.get("memory_percent", 0.0)
-    rt = rec.get("response_time_ms", 0.0)
-    err = rec.get("error_rate", 0.0)
-    conns = rec.get("active_connections", 0)
-    queue = rec.get("queue_depth", 0)
-    db_time = rec.get("db_query_time_ms", 0.0)
-    rps = rec.get("throughput_rps", 0)
+    cpu = float(rec.get("cpu_percent", 0.0))
+    mem = float(rec.get("memory_percent", 0.0))
+    rt = float(rec.get("response_time_ms", 0.0))
+    err = float(rec.get("error_rate", 0.0))
+    conns = float(rec.get("active_connections", 0))
+    queue = float(rec.get("queue_depth", 0))
+    db_time = float(rec.get("db_query_time_ms", 0.0))
+    rps = float(rec.get("throughput_rps", 100))
 
-    # 1. Database Connection Pool Exhaustion / DB Slow Query
-    if "rds_" in fname or "database" in fname or "postgres" in fname or conns >= 900 or db_time >= 2000.0:
-        return "db_connection_pool_exhaustion", "increase_db_pool_size", "critical"
+    # Normalized feature vector (0.0 to 1.0)
+    v_cpu = min(1.0, max(0.0, cpu / 100.0))
+    v_mem = min(1.0, max(0.0, mem / 100.0))
+    v_rt = min(1.0, max(0.0, rt / 3000.0))
+    v_err = min(1.0, max(0.0, err / 50.0))
+    v_conn = min(1.0, max(0.0, conns / 1000.0))
+    v_queue = min(1.0, max(0.0, queue / 300.0))
+    v_db = min(1.0, max(0.0, db_time / 2000.0))
+    v_rps = min(1.0, max(0.0, rps / 2500.0))
+    
+    # Derived composite signals (Little's Law residual & CPU per request, normalized to [0,1])
+    littles_residual = min(1.0, max(0.0, v_conn - (v_rps * v_rt)))
+    cpu_per_req = min(1.0, max(0.0, v_cpu / max(0.2, v_rps)))
 
-    # 2. Memory Leak / OOM Risk
-    if "rogue" in fname or "memory" in fname or "oom" in fname or "leak" in fname or mem >= 90.0:
-        return "memory_leak", "staggered_restart", "critical" if mem >= 95 else "high"
+    # Composite Multi-Vector Scores across failure archetypes
+    scores = {
+        "db_connection_pool_exhaustion": (
+            0.55 * v_conn + 0.35 * v_db + 0.10 * littles_residual + 
+            (0.35 if "rds_" in fname or "database" in fname or "postgres" in fname else 0.0)
+        ),
+        "memory_leak": (
+            0.75 * v_mem + 0.15 * v_rt + 0.10 * v_cpu +
+            (0.40 if "rogue" in fname or "memory" in fname or "oom" in fname or "leak" in fname else 0.0)
+        ),
+        "hardware_thermal_throttling": (
+            0.45 * v_cpu + 0.45 * v_rt + 0.10 * v_err +
+            (0.60 if "temperature" in fname or "thermal" in fname else 0.0)
+        ),
+        "network_partition": (
+            0.75 * v_err + 0.25 * v_rt +
+            (0.45 if "network" in fname or "net_" in fname else 0.0)
+        ),
+        "kafka_consumer_lag": (
+            0.75 * v_queue + 0.15 * v_rt + 0.10 * (1.0 - v_rps) +
+            (0.35 if "queue" in fname or "kafka" in fname else 0.0)
+        ),
+        "capacity_wall_breach": (
+            0.45 * v_rps + 0.35 * v_rt + 0.20 * cpu_per_req +
+            (0.40 if "elb_" in fname or "asg_" in fname or "surge" in fname or "traffic" in fname else 0.0)
+        ),
+        "cpu_saturation": (
+            0.75 * v_cpu + 0.25 * v_rt +
+            (0.30 if "ec2_cpu" in fname or "cpu_utilization" in fname or "cpu_saturation" in fname else 0.0)
+        ),
+        "latency_degradation": (
+            0.65 * v_rt + 0.20 * v_db + 0.15 * (1.0 - v_err) +
+            (0.30 if "latency" in fname or "travel" in fname else 0.0)
+        )
+    }
 
-    # 3. Hardware Thermal Throttling
-    if "temperature" in fname or "thermal" in fname:
-        return "hardware_thermal_throttling", "throttle_clock_speed", "critical"
+    # Action Playbook Mapping
+    playbooks = {
+        "db_connection_pool_exhaustion": ("increase_db_pool_size", "critical"),
+        "memory_leak": ("staggered_restart", "critical" if v_mem > 0.9 else "high"),
+        "hardware_thermal_throttling": ("throttle_clock_speed", "critical"),
+        "network_partition": ("trip_circuit_breaker", "critical"),
+        "kafka_consumer_lag": ("scale_consumer_group", "high"),
+        "capacity_wall_breach": ("provision_buffer_instances", "high"),
+        "cpu_saturation": ("horizontal_scale_out", "critical" if v_cpu > 0.9 else "high"),
+        "latency_degradation": ("optimize_cache", "medium" if v_rt < 0.8 else "high")
+    }
 
-    # 4. Network Partition / Connectivity Failure
-    if "network" in fname or "net_" in fname or err >= 25.0:
-        return "network_partition", "trip_circuit_breaker", "critical"
+    # Pick archetype with maximum composite multi-metric score
+    best_rc = max(scores, key=scores.get)
+    act, sev = playbooks[best_rc]
 
-    # 5. Message Queue Backpressure / Kafka Consumer Lag
-    if queue >= 100:
-        return "kafka_consumer_lag", "scale_consumer_group", "high"
-
-    # 6. Capacity Wall Breach / ELB Traffic Surge
-    if "elb_" in fname or "asg_" in fname or rps >= 3000:
-        return "capacity_wall_breach", "provision_buffer_instances", "high"
-
-    # 7. System Latency Degradation / Slow Response
-    if "latency" in fname or "travel" in fname or rt >= 2000.0:
-        return "latency_degradation", "optimize_cache", "medium" if rt < 4000 else "high"
-
-    # 8. CPU Saturation
-    if cpu >= 85.0 or "ec2_cpu" in fname or "cpu_utilization" in fname:
-        return "cpu_saturation", "horizontal_scale_out", "critical" if cpu >= 95.0 else "high"
-
-    return "latency_degradation", "optimize_cache", "medium"
+    return best_rc, act, sev
 
 
 @app.post("/api/upload-csv")
