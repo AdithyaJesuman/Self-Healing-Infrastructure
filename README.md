@@ -68,25 +68,19 @@ The system operates on a rigorous 10-layer pipeline processing architecture:
 ## Installation & Quick Start
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
+- Docker Desktop
+- Windows OS (for start.bat)
 
 ### Setup
-```bash
-# 1. Clone the repository
-git clone <repository_url>
-cd aiops-platform-starter
+Simply run the included batch script:
+``bash
+.\start.bat
+``
 
-# 2. Install Python dependencies
-pip install -r requirements.txt
+This script will:
+1. Automatically install Node dependencies and build the React frontend.
+2. Copy the compiled UI assets into the API Gateway.
+3. Spin up the entire 12-container microservice cluster via Docker Compose.
 
-# 3. Start Backend & CLI
-python aiops_cli.py
+Once the script completes, visit **http://localhost:8001** in your browser to access the Web Command Center UI.
 
-# 4. Start Web Command Center UI (in a new terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-Visit `http://localhost:8001` in your browser.

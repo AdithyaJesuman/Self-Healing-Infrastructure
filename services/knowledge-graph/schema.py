@@ -1,6 +1,7 @@
 import os
 from neo4j import GraphDatabase
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import uvicorn
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
@@ -10,13 +11,49 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "devpassword123")
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 app = FastAPI(title="Knowledge Graph API")
 
-def create_constraints():
-    with driver.session() as session:
-        # Create constraint for Service names to be unique
-        session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (s:Service) REQUIRE s.name IS UNIQUE")
-        # Create constraint for Incident IDs to be unique
-        session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (i:Incident) REQUIRE i.id IS UNIQUE")
-        print("Neo4j constraints created.")
+def create_constraints_and_seed():
+    """Ensures constraints are set up and seeds topology if Neo4j is empty."""
+    try:
+        with driver.session() as session:
+            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (s:Service) REQUIRE s.name IS UNIQUE")
+            session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (i:Incident) REQUIRE i.id IS UNIQUE")
+            
+            # Check node count
+            res = session.run("MATCH (n) RETURN count(n) AS cnt")
+            record = res.single()
+            count = record["cnt"] if record else 0
+            
+            if count == 0:
+                print("Neo4j is empty. Auto-seeding 7 microservice nodes and dependency edges...")
+                seed_query = """
+                MERGE (ingress:Service {name: 'ingress-gateway', type: 'gateway'})
+                MERGE (payment:Service {name: 'payment-api', type: 'api'})
+                MERGE (auth:Service {name: 'auth-service', type: 'api'})
+                MERGE (order:Service {name: 'order-processor', type: 'worker'})
+                MERGE (notification:Service {name: 'notification-svc', type: 'service'})
+                MERGE (db:Service {name: 'db-primary', type: 'database'})
+                MERGE (invdb:Service {name: 'inventory-db', type: 'database'})
+
+                MERGE (ingress)-[:DEPENDS_ON]->(auth)
+                MERGE (ingress)-[:DEPENDS_ON]->(payment)
+                MERGE (payment)-[:DEPENDS_ON]->(db)
+                MERGE (payment)-[:DEPENDS_ON]->(notification)
+                MERGE (auth)-[:DEPENDS_ON]->(db)
+                MERGE (order)-[:DEPENDS_ON]->(invdb)
+                
+                MERGE (inc1:Incident {id: 'INC-2026-0812'})
+                MERGE (payment)-[:HAD_INCIDENT]->(inc1)
+                """
+                session.run(seed_query)
+                print("Neo4j auto-seeding complete.")
+            else:
+                print(f"Neo4j Knowledge Graph online with {count} existing nodes.")
+    except Exception as e:
+        print(f"Neo4j connection note: {e}")
+
+@app.on_event("startup")
+def startup_event():
+    create_constraints_and_seed()
 
 def get_graph_context_query(tx, service_name):
     query = """
@@ -63,8 +100,6 @@ def get_graph_context(service_name: str):
         
     return context
 
-from pydantic import BaseModel
-
 class LearnedFix(BaseModel):
     service_name: str
     action: str
@@ -72,10 +107,6 @@ class LearnedFix(BaseModel):
 
 @app.post("/learn-fix")
 def learn_fix(fix: LearnedFix):
-    """
-    Continuous Learning Loop: Ingests a successful auto-heal action and links it to the service.
-    This builds an automated "proven playbook" over time.
-    """
     query = """
     MATCH (s:Service {name: $service_name})
     MERGE (a:Action {name: $action})
@@ -93,5 +124,5 @@ def learn_fix(fix: LearnedFix):
     return {"status": "learned", "success_count": count}
 
 if __name__ == "__main__":
-    create_constraints()
+    create_constraints_and_seed()
     uvicorn.run(app, host="0.0.0.0", port=8001)

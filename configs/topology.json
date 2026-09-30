@@ -1,0 +1,10 @@
+{
+    "payment-api": ["postgres-primary", "redis-cache", "kafka"],
+    "checkout-service": ["payment-api", "inventory-service", "redis-cache"],
+    "order-service": ["payment-api", "postgres-primary", "notification-service"],
+    "inventory-service": ["postgres-primary", "redis-cache"],
+    "notification-service": ["kafka"],
+    "postgres-primary": [],
+    "redis-cache": [],
+    "kafka": []
+}

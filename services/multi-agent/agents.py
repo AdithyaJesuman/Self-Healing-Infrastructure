@@ -243,7 +243,48 @@ def diagnosis_agent(anomaly: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     "rule_matched": f"ANY({rule['requires_any']})"
                 }
 
-    logger.warning("[DiagnosisAgent] No rule matched triggers: %s", triggers)
+    logger.warning("[DiagnosisAgent] No rule matched triggers: %s. Searching corpus...", triggers)
+    
+    # Fallback to Corpus Search (C1, F3)
+    live_corpus = []
+    try:
+        live_corpus_path = os.path.join(os.path.dirname(__file__), "..", "..", "logs", "live_corpus.json")
+        if os.path.exists(live_corpus_path):
+            with open(live_corpus_path, "r", encoding="utf-8") as f:
+                live_corpus = json.load(f)
+    except Exception:
+        pass
+        
+    try:
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "shared"))
+        from incident_corpus import INCIDENT_CORPUS
+        combined_corpus = INCIDENT_CORPUS + live_corpus
+    except ImportError:
+        combined_corpus = live_corpus
+        
+    best_match = None
+    best_score = -1
+    
+    for entry in combined_corpus:
+        symptoms = entry.get("symptoms", {})
+        score = 0
+        for m in triggers:
+            if m in symptoms and symptoms[m] > 0:
+                score += 1
+        if score > best_score and score > 0:
+            best_score = score
+            best_match = entry
+            
+    if best_match:
+        logger.info("[DiagnosisAgent] Corpus match found! root_cause=%s", best_match.get("root_cause"))
+        return {
+            "root_cause": best_match.get("root_cause", "Unknown"),
+            "confidence": 0.75,
+            "evidence_used": [f"corpus_match={best_match.get('incident_id', 'unknown')}", f"overlap_score={best_score}"],
+            "rule_matched": "CORPUS_SIMILARITY_MATCH"
+        }
+
     return None
 
 
@@ -357,22 +398,28 @@ def planner_agent(diagnosis: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ── Orchestrator ──────────────────────────────────────────────────────────────
-def process_anomaly(anomaly: Dict[str, Any]) -> None:
+def process_anomaly(anomaly: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     anomaly_id = anomaly.get("anomaly_id", "UNKNOWN")
     logger.info("=== Pipeline START: %s ===", anomaly_id)
 
     mon = monitoring_agent(anomaly)
     if not mon["is_significant"]:
         logger.info("[%s] Dropped by MonitoringAgent.", anomaly_id)
-        return
+        return None
 
     diag = diagnosis_agent(anomaly)
     if not diag:
         logger.warning("[%s] No diagnosis — escalating.", anomaly_id)
-        return
+        return None
 
     forecast = forecast_agent(anomaly, diag)
     plan = planner_agent(diag)
+    
+    ttf = forecast.get("time_to_failure_seconds", 3600)
+    forecast_vote = 0.99 if ttf < 60 else (0.92 if ttf <= 300 else 0.70)
+    planner_vote = 0.90
+    if plan.get("candidate_fixes"):
+        planner_vote = plan["candidate_fixes"][0].get("estimated_success_rate", 0.90)
 
     output: Dict[str, Any] = {
         "incident_id": anomaly_id.replace("ANOM", "INC"),
@@ -382,15 +429,15 @@ def process_anomaly(anomaly: Dict[str, Any]) -> None:
         "agent_consensus": {
             "monitoring_agent": 0.95 if mon["is_significant"] else 0.1,
             "diagnosis_agent": diag["confidence"],
-            "forecast_agent": 0.90,
-            "planner_agent": 0.90,
+            "forecast_agent": forecast_vote,
+            "planner_agent": planner_vote,
         },
         "forecast": forecast,
         "candidate_fixes": plan["candidate_fixes"],
     }
 
-    producer.send("incidents-diagnosed", value=output)
     logger.info("=== Pipeline DONE: %s | root_cause=%s ===", output["incident_id"], output["root_cause"])
+    return output
 
 
 def main() -> None:
@@ -416,32 +463,10 @@ def main() -> None:
     for message in consumer:
         anomaly = message.value
         try:
-            mon = monitoring_agent(anomaly)
-            if not mon["is_significant"]:
-                logger.info("[%s] Dropped.", anomaly.get("anomaly_id"))
-                continue
-            diag = diagnosis_agent(anomaly)
-            if not diag:
-                logger.warning("[%s] No diagnosis — escalating.", anomaly.get("anomaly_id"))
-                continue
-            forecast = forecast_agent(anomaly, diag)
-            plan = planner_agent(diag)
-            output = {
-                "incident_id": anomaly.get("anomaly_id", "UNKNOWN").replace("ANOM", "INC"),
-                "root_cause": diag["root_cause"],
-                "confidence": diag["confidence"],
-                "rule_matched": diag.get("rule_matched", ""),
-                "agent_consensus": {
-                    "monitoring_agent": 0.95 if mon["is_significant"] else 0.1,
-                    "diagnosis_agent": diag["confidence"],
-                    "forecast_agent": 0.90,
-                    "planner_agent": 0.90,
-                },
-                "forecast": forecast,
-                "candidate_fixes": plan["candidate_fixes"],
-            }
-            producer_local.send("incidents-diagnosed", value=output)
-            logger.info("Published diagnosis: %s | %s", output["incident_id"], output["root_cause"])
+            output = process_anomaly(anomaly)
+            if output:
+                producer_local.send("incidents-diagnosed", value=output)
+                logger.info("Published diagnosis: %s | %s", output["incident_id"], output["root_cause"])
         except Exception as e:
             logger.error("Pipeline error: %s", e, exc_info=True)
 

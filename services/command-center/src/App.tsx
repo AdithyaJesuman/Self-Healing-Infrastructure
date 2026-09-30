@@ -33,7 +33,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: '/', label: 'Live Telemetry', icon: '⚡', badge: 'LIVE', badgeColor: 'cyan' },
       { path: '/logs', label: 'Log Intelligence', icon: '📋', badge: 'STREAM', badgeColor: 'teal' },
-      { path: '/overview', label: 'Topology & Mesh', icon: '🕸️', badge: '7 NODES', badgeColor: 'blue' },
+
     ]
   },
   {

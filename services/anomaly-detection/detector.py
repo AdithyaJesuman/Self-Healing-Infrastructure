@@ -121,7 +121,7 @@ def detect_anomaly(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     # Trim buffer to 2000 samples max
     if len(data_buffer) > 2000:
-        data_buffer.pop(0)
+        del data_buffer[0:len(data_buffer)-2000]
 
     # --- Detection ---
     hard_triggers = _hard_threshold_triggers(raw)

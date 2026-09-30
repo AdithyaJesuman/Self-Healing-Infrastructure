@@ -1,0 +1,20 @@
+[
+  {
+    "incident_id": "INC-CHAOS-1b61f64a",
+    "timestamp": "2026-09-30T00:08:02.043500+00:00",
+    "symptoms": {
+      "cpu_percent": 98.5,
+      "memory_percent": 96.8,
+      "response_time_ms": 3200,
+      "error_rate": 0.0,
+      "throughput_rps": 1550,
+      "db_query_time_ms": 81,
+      "queue_depth": 180,
+      "active_connections": 124
+    },
+    "root_cause": "cpu_saturation",
+    "fix_applied": "horizontal_scale_out",
+    "outcome": "resolved",
+    "origin": "chaos_lab"
+  }
+]

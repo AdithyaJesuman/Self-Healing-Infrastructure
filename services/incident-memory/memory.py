@@ -62,9 +62,12 @@ def store_incident(record: IncidentRecord):
 
 @app.post("/find-similar")
 def find_similar_incidents(query: SymptomsQuery):
+    if collection.count() == 0:
+        return {"matches": []}
+        
     results = collection.query(
         query_texts=[query.symptoms_text],
-        n_results=min(query.top_k, collection.count() or 1)
+        n_results=min(query.top_k, collection.count())
     )
     matches = []
     if results["documents"] and results["documents"][0]:

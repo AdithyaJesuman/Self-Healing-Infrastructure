@@ -24,9 +24,20 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 # Known bad patterns (fast path)
 KNOWN_BAD = ["connection pool exhausted", "oom", "timeout", "deadlock", "out of memory"]
 
-# Mock normal baseline cluster centers (in reality, compute from Normal DB)
-# For MVP, we just check against known bad patterns and extreme outlier distances
-normal_baseline = np.random.rand(10, 384) # 384 is dimension of MiniLM
+# Compute baseline cluster centers from actual normal log samples
+_normal_samples = [
+    "GET /api/v1/health 200 OK",
+    "User logged in successfully",
+    "DB connection established",
+    "Payment processed successfully",
+    "Worker node active and listening",
+    "Kafka consumer connected to broker",
+    "Cache hit for user profile",
+    "Request completed in 45ms",
+    "Starting scheduled backup",
+    "Backup completed successfully"
+]
+normal_baseline = model.encode(_normal_samples)
 
 def cosine_distance(u, v):
     return 1.0 - (np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v)))

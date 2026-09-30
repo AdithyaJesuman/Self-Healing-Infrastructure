@@ -26,25 +26,9 @@ import numpy as np
 # ---------------------------------------------------------------------------
 _ROOT = os.path.dirname(os.path.abspath(__file__))
 
-_kafka_stub = types.ModuleType("kafka")
-class _StubClass:
-    def __init__(self, *a, **kw): pass
-    def __call__(self, *a, **kw): return self
-    def __getattr__(self, name): return self
-_kafka_stub.KafkaConsumer = _StubClass
-_kafka_stub.KafkaProducer = _StubClass
-if "kafka" not in sys.modules:
-    sys.modules["kafka"] = _kafka_stub
-
-if "influxdb_client" not in sys.modules:
-    _influx_stub = types.ModuleType("influxdb_client")
-    _influx_stub.InfluxDBClient = _StubClass
-    _influx_stub.Point = _StubClass
-    sys.modules["influxdb_client"] = _influx_stub
-    _influx_write = types.ModuleType("influxdb_client.client.write_api")
-    _influx_write.SYNCHRONOUS = None
-    sys.modules["influxdb_client.client"] = types.ModuleType("influxdb_client.client")
-    sys.modules["influxdb_client.client.write_api"] = _influx_write
+sys.path.insert(0, os.path.join(_ROOT, "shared"))
+from stubs import apply_stubs
+apply_stubs()
 
 sys.path.insert(0, os.path.join(_ROOT, "services", "multi-agent"))
 sys.path.insert(0, os.path.join(_ROOT, "services", "anomaly-detection"))

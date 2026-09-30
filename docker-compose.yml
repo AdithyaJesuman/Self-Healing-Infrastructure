@@ -1,8 +1,10 @@
 version: "3.8"
 
 services:
+  # --- Infrastructure Layer ---
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -11,19 +13,25 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    restart: on-failure
 
   influxdb:
     image: influxdb:2.7
+    container_name: influxdb
     ports:
       - "8086:8086"
     environment:
@@ -38,6 +46,7 @@ services:
 
   neo4j:
     image: neo4j:5.15-community
+    container_name: neo4j
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -49,6 +58,7 @@ services:
 
   chromadb:
     image: chromadb/chroma:latest
+    container_name: chromadb
     ports:
       - "8000:8000"
     volumes:
@@ -56,6 +66,7 @@ services:
 
   grafana:
     image: grafana/grafana:10.2.0
+    container_name: grafana
     ports:
       - "3000:3000"
     environment:
@@ -67,17 +78,26 @@ services:
     depends_on:
       - influxdb
 
+  # --- Application Services ---
   api-gateway:
     build: ./services/api-gateway
     container_name: api-gateway
     environment:
       - "KAFKA_BROKER=kafka:9092"
+      - "INFLUXDB_URL=http://influxdb:8086"
+      - "NEO4J_URL=bolt://neo4j:7687"
+      - "CHROMADB_URL=http://chromadb:8000"
     ports:
       - "8001:8000"
     volumes:
       - ./services/api-gateway:/app
+      - ./datasets:/app/datasets
     depends_on:
       - kafka
+      - influxdb
+      - neo4j
+      - chromadb
+    restart: on-failure
 
   command-center:
     image: node:20-alpine
@@ -91,7 +111,44 @@ services:
     depends_on:
       - api-gateway
 
+  # --- Pipeline Microservice Daemons ---
+  collector:
+    build: ./services/collector
+    container_name: collector
+    environment:
+      - "KAFKA_BROKER=kafka:9092"
+      - "INFLUXDB_URL=http://influxdb:8086"
+    depends_on:
+      - kafka
+      - influxdb
+    restart: on-failure
 
+  anomaly-detection:
+    build: ./services/anomaly-detection
+    container_name: anomaly-detection
+    environment:
+      - "KAFKA_BROKER=kafka:9092"
+    depends_on:
+      - kafka
+    restart: on-failure
+
+  multi-agent:
+    build: ./services/multi-agent
+    container_name: multi-agent
+    environment:
+      - "KAFKA_BROKER=kafka:9092"
+    depends_on:
+      - kafka
+    restart: on-failure
+
+  policy-engine:
+    build: ./services/policy-engine
+    container_name: policy-engine
+    environment:
+      - "KAFKA_BROKER=kafka:9092"
+    depends_on:
+      - kafka
+    restart: on-failure
 
 volumes:
   influxdb-data:

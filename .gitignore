@@ -1,9 +1,32 @@
+# Environment & Local Overrides
 .env
+.env.local
 venv/
+.venv/
+env/
+
+# Python Cache & Bytecode
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & Frontend Build
 node_modules/
+dist/
+.npm/
+
+# IDE & OS Files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime Storage & Logs
 *.log
 influxdb-data/
 neo4j-data/

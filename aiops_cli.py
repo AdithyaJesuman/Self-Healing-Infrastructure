@@ -42,27 +42,9 @@ _ROOT = os.path.dirname(os.path.abspath(__file__))
 # ---------------------------------------------------------------------------
 import types as _types
 
-# Create a lightweight kafka stub so `from kafka import ...` doesn't crash
-_kafka_stub = _types.ModuleType("kafka")
-class _StubClass:
-    def __init__(self, *a, **kw): pass
-    def __call__(self, *a, **kw): return self
-    def __getattr__(self, name): return self
-_kafka_stub.KafkaConsumer = _StubClass
-_kafka_stub.KafkaProducer = _StubClass
-if "kafka" not in sys.modules:
-    sys.modules["kafka"] = _kafka_stub
-
-# Stub influxdb_client similarly
-if "influxdb_client" not in sys.modules:
-    _influx_stub = _types.ModuleType("influxdb_client")
-    _influx_stub.InfluxDBClient = _StubClass
-    _influx_stub.Point = _StubClass
-    sys.modules["influxdb_client"] = _influx_stub
-    _influx_write = _types.ModuleType("influxdb_client.client.write_api")
-    _influx_write.SYNCHRONOUS = None
-    sys.modules["influxdb_client.client"] = _types.ModuleType("influxdb_client.client")
-    sys.modules["influxdb_client.client.write_api"] = _influx_write
+sys.path.insert(0, os.path.join(_ROOT, "shared"))
+from stubs import apply_stubs
+apply_stubs()
 
 sys.path.insert(0, os.path.join(_ROOT, "services", "multi-agent"))
 sys.path.insert(0, os.path.join(_ROOT, "services", "anomaly-detection"))
@@ -148,6 +130,10 @@ def simulate_metrics() -> Dict[str, Any]:
         mem = psutil.virtual_memory().percent
         net_conns = len(psutil.net_connections()) if hasattr(psutil, "net_connections") else 150
     else:
+        if not getattr(simulate_metrics, "_warned", False):
+            if console:
+                console.print("[yellow]Warning: psutil not installed. Using mock metrics.[/yellow]")
+            simulate_metrics._warned = True
         cpu = 45.0
         mem = 55.0
         net_conns = 120
@@ -318,11 +304,12 @@ def detect_anomaly(raw_metrics: Dict[str, Any], derived: Dict[str, Any]) -> Opti
 
     severity = "critical" if confidence >= 0.90 else "high" if confidence >= 0.75 else "medium"
 
+    svc_name = os.getenv("SERVICE_NAME", "payment-api")
     return {
         "anomaly_id": f"ANOM-{str(uuid.uuid4())[:8]}",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "service_name": "payment-api",
-        "instance_id": "pod-cli-0001",
+        "service_name": svc_name,
+        "instance_id": f"pod-{svc_name}-{str(uuid.uuid4())[:4]}",
         "detector": "ensemble_iso_3sigma_adaptive",
         "confidence": confidence,
         "severity": severity,
@@ -337,16 +324,20 @@ def detect_anomaly(raw_metrics: Dict[str, Any], derived: Dict[str, Any]) -> Opti
 # ---------------------------------------------------------------------------
 # LAYER 6 — Knowledge Graph (in-memory topology)
 # ---------------------------------------------------------------------------
-SERVICE_TOPOLOGY = {
-    "payment-api": ["postgres-primary", "redis-cache", "kafka"],
-    "checkout-service": ["payment-api", "inventory-service", "redis-cache"],
-    "order-service": ["payment-api", "postgres-primary", "notification-service"],
-    "inventory-service": ["postgres-primary", "redis-cache"],
-    "notification-service": ["kafka"],
-    "postgres-primary": [],
-    "redis-cache": [],
-    "kafka": [],
-}
+try:
+    with open(os.path.join(_ROOT, "configs", "topology.json"), "r", encoding="utf-8") as _f:
+        SERVICE_TOPOLOGY = json.load(_f)
+except Exception:
+    SERVICE_TOPOLOGY = {
+        "payment-api": ["postgres-primary", "redis-cache", "kafka"],
+        "checkout-service": ["payment-api", "inventory-service", "redis-cache"],
+        "order-service": ["payment-api", "postgres-primary", "notification-service"],
+        "inventory-service": ["postgres-primary", "redis-cache"],
+        "notification-service": ["kafka"],
+        "postgres-primary": [],
+        "redis-cache": [],
+        "kafka": [],
+    }
 
 def get_blast_radius(service: str) -> Dict[str, Any]:
     """BFS to find 1-hop dependencies and 2-hop blast radius."""
@@ -366,16 +357,24 @@ COOLDOWN_SECONDS = 300
 
 def evaluate_policy_standalone(diagnosis: Dict[str, Any]) -> Tuple[str, str]:
     """Evaluate safety gates: cooldown, confidence, corroboration, risk."""
-    service = "payment-api"
+    service = diagnosis.get("service_name", "payment-api")
     now = time.time()
     if now - _cooldowns.get(service, 0) < COOLDOWN_SECONDS:
         return "ESCALATE_TO_HUMAN", "Cooldown active. No repeat actions within 5 mins."
     confidence = diagnosis.get("confidence", 0.0)
     if confidence < 0.95:
         return "ESCALATE_TO_HUMAN", f"Confidence {confidence} < 0.95 threshold."
+    
     consensus = diagnosis.get("agent_consensus", {})
-    if len(consensus) < 2 or any(v < 0.7 for v in consensus.values()):
-        return "ESCALATE_TO_HUMAN", "Agents lack corroboration or strong consensus."
+    confidences = list(consensus.values())
+    if len(confidences) < 2:
+        return "ESCALATE_TO_HUMAN", "Agents lack corroboration."
+    
+    mean = sum(confidences) / len(confidences)
+    std_dev = (sum((x - mean) ** 2 for x in confidences) / len(confidences)) ** 0.5
+    if std_dev > 0.15 or min(confidences) < 0.6:
+        return "ESCALATE_TO_HUMAN", "LOW_CONSENSUS: Agents disagree or lack confidence."
+        
     fixes = diagnosis.get("candidate_fixes", [])
     if not fixes:
         return "ESCALATE_TO_HUMAN", "No candidate fixes available."
@@ -569,11 +568,12 @@ def cmd_diagnose(anomaly: Optional[Dict] = None):
 
     if anomaly is None:
         cprint("[yellow]No anomaly provided. Generating a test anomaly...[/yellow]")
+        svc_name = os.getenv("SERVICE_NAME", "payment-api")
         anomaly = {
             "anomaly_id": f"ANOM-{str(uuid.uuid4())[:8]}",
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "service_name": "payment-api",
-            "instance_id": "pod-cli-0001",
+            "service_name": svc_name,
+            "instance_id": f"pod-{svc_name}-{str(uuid.uuid4())[:4]}",
             "detector": "cli_test",
             "confidence": 0.92,
             "severity": "critical",
@@ -708,9 +708,45 @@ def cmd_chaos(chaos_type: str = "cpu_spike"):
         # Run diagnosis
         result = cmd_diagnose(anomaly)
         if result:
-            return cmd_pipeline_from_diagnosis(result)
+            pipeline_result = cmd_pipeline_from_diagnosis(result)
+            
+            # Save to live corpus (C2)
+            try:
+                os.makedirs(os.path.join(_ROOT, "logs"), exist_ok=True)
+                corpus_path = os.path.join(_ROOT, "logs", "live_corpus.json")
+                corpus_data = []
+                if os.path.exists(corpus_path):
+                    with open(corpus_path, "r", encoding="utf-8") as f:
+                        corpus_data = json.load(f)
+                
+                plan = result.get("plan", {})
+                best_fix = plan.get("candidate_fixes", [{}])[0].get("action", "unknown") if plan.get("candidate_fixes") else "unknown"
+                
+                corpus_entry = {
+                    "incident_id": anomaly["anomaly_id"].replace("ANOM", "INC-CHAOS"),
+                    "timestamp": anomaly["timestamp"],
+                    "symptoms": metrics,
+                    "root_cause": result["diagnosis"]["root_cause"],
+                    "fix_applied": best_fix,
+                    "outcome": "resolved",
+                    "origin": "chaos_lab"
+                }
+                
+                corpus_data.append(corpus_entry)
+                with open(corpus_path, "w", encoding="utf-8") as f:
+                    json.dump(corpus_data, f, indent=2)
+                cprint("\n[green]✓ Chaos run automatically saved to logs/live_corpus.json[/green]")
+            except Exception as e:
+                cprint(f"[yellow]Could not save to live_corpus.json: {e}[/yellow]")
+                
+            return pipeline_result
     else:
         cprint("[yellow]Detection did not fire. The injected values may not have crossed thresholds.[/yellow]")
+        cprint("\n[cyan]Debug: Check if metrics crossed these hard thresholds:[/cyan]")
+        for k, v in metrics.items():
+            thresh = _HARD_THRESHOLDS.get(k)
+            if thresh:
+                cprint(f"  {k}: {v} (Threshold: {thresh})")
 
 
 def cmd_twin(fix_action: str = "increase_db_pool_size"):
@@ -937,14 +973,46 @@ def cmd_pipeline_from_diagnosis(diag_result: Dict) -> Optional[str]:
     # Blast Radius
     blast = get_blast_radius(anomaly.get("service_name", "payment-api"))
 
+    # Measure Outcome (A6)
+    if decision == "AUTO_HEAL" and twin_result.get("simulation_success"):
+        if console:
+            console.print("[cyan]Waiting 5s to verify metrics recovery post-heal...[/cyan]")
+        time.sleep(5)
+        post_heal_metrics = simulate_metrics()
+        if post_heal_metrics.get("cpu_percent", 0) < 60:
+            status = "resolved"
+            if console:
+                console.print("[green]✓ Telemetry verified. Service recovered.[/green]")
+        else:
+            status = "auto_heal_failed"
+            if console:
+                console.print("[red]✗ Telemetry indicates service is still struggling. Escalating.[/red]")
+    else:
+        status = "escalated"
+        
     # Post-Mortem
     print_rule("Post-Mortem Report")
-    status = "resolved" if decision == "AUTO_HEAL" and twin_result.get("simulation_success") else "escalated"
     report = generate_post_mortem(
         full_diag["incident_id"], diag["root_cause"], best_fix["action"],
         status, diag["confidence"], fc["time_to_failure_seconds"],
         blast, decision
     )
+
+    # If resolved, inform the Knowledge Graph
+    if status == "resolved" and best_fix.get("action") != "none":
+        try:
+            import urllib.request
+            req = urllib.request.Request("http://localhost:8000/learn-fix", method="POST")
+            req.add_header("Content-Type", "application/json")
+            data = json.dumps({
+                "service_name": anomaly.get("service_name", "payment-api"),
+                "action": best_fix["action"]
+            }).encode()
+            urllib.request.urlopen(req, data=data, timeout=1)
+            if console:
+                console.print("[green]✓ Notified Knowledge Graph of successful fix (Neo4j)[/green]")
+        except Exception:
+            pass
 
     # Save report
     reports_dir = os.path.join(_ROOT, "reports")

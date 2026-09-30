@@ -176,7 +176,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "staggered_restart",
         "outcome": "resolved",
         "time_to_resolution_seconds": 300,
-        "service": "payment-api"
+        "service": "checkout-service"
     },
     {
         "incident_id": "INC-ERR-002",
@@ -230,7 +230,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "failover_to_secondary_region",
         "outcome": "resolved",
         "time_to_resolution_seconds": 600,
-        "service": "payment-api"
+        "service": "order-service"
     },
     {
         "incident_id": "INC-NET-002",
@@ -284,7 +284,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "rollback_deployment",
         "outcome": "resolved",
         "time_to_resolution_seconds": 120,
-        "service": "payment-api"
+        "service": "inventory-service"
     },
 
     # ── SSL/TLS Certificate Expiry ───────────────────────────────────────────
@@ -296,7 +296,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "renew_ssl_certificate",
         "outcome": "resolved",
         "time_to_resolution_seconds": 60,
-        "service": "payment-api"
+        "service": "notification-service"
     },
 
     # ── Third-Party Dependency Failure ───────────────────────────────────────
@@ -308,7 +308,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "enable_circuit_breaker_fallback",
         "outcome": "resolved",
         "time_to_resolution_seconds": 300,
-        "service": "payment-api"
+        "service": "postgres-primary"
     },
     {
         "incident_id": "INC-EXT-002",
@@ -330,7 +330,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "horizontal_scale_out",
         "outcome": "resolved",
         "time_to_resolution_seconds": 600,
-        "service": "payment-api"
+        "service": "redis-cache"
     },
     {
         "incident_id": "INC-SPIKE-002",
@@ -388,7 +388,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "rotate_and_compress_logs",
         "outcome": "resolved",
         "time_to_resolution_seconds": 180,
-        "service": "payment-api"
+        "service": "checkout-service"
     },
 
     # ── Config Drift ──────────────────────────────────────────────────────────
@@ -412,7 +412,7 @@ INCIDENT_CORPUS: List[Dict[str, Any]] = [
         "fix_applied": "increase_memory_limit",
         "outcome": "resolved",
         "time_to_resolution_seconds": 90,
-        "service": "payment-api"
+        "service": "order-service"
     },
     {
         "incident_id": "INC-K8S-002",

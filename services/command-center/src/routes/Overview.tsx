@@ -157,11 +157,11 @@ export default function Overview() {
                       </Group>
                       <Group justify="space-between" mt="xs">
                         <Text size="xs" c="cyan">Latency: {srv.latency_ms}ms</Text>
-                        <Text size="xs" c="dimmed">Type: {srv.type}</Text>
+                        <Text size="xs" c="dimmed">Type: {srv.type || 'service'}</Text>
                       </Group>
-                      {srv.dependencies.length > 0 && (
+                      {(srv.dependencies || []).length > 0 && (
                         <Text size="xs" c="dimmed" mt={4}>
-                          Depends on: {srv.dependencies.join(', ')}
+                          Depends on: {(srv.dependencies || []).join(', ')}
                         </Text>
                       )}
                     </Paper>
